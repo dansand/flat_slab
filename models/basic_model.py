@@ -5,13 +5,13 @@
 # 
 # 
 
-# In[136]:
+# In[1]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[137]:
+# In[2]:
 
 
 import numpy as np
@@ -25,7 +25,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[138]:
+# In[3]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -41,7 +41,7 @@ except:
     pass
 
 
-# In[139]:
+# In[4]:
 
 
 #load in parent stuff
@@ -50,7 +50,7 @@ import nb_load_stuff
 from tectModelClass import *
 
 
-# In[140]:
+# In[5]:
 
 
 from unsupported_dan.UWsubduction.subduction_utils import *
@@ -61,7 +61,7 @@ from unsupported_dan.interfaces.interface2D import interface2D , interface_colle
 
 # ## Create output dir structure
 
-# In[141]:
+# In[6]:
 
 
 #outputPath = os.path.join(os.path.abspath("."),"output/")
@@ -78,18 +78,100 @@ uw.barrier()
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[142]:
+# In[34]:
+
+
+from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
+u = UnitRegistry
+
+
+# In[35]:
+
+
+#pd refers to dimensional paramters
+pd = edict({})
+
+#Main physical paramters (thermal convection parameters)
+pd.refDensity = 3300.* u.kilogram / u.meter**3                    #reference density
+pd.refGravity = 9.8* u.metre / u.second**2                        #surface gravity
+pd.refDiffusivity = 1e-6 *u.metre**2 / u.second                   #thermal diffusivity
+pd.refExpansivity = 3e-5/u.kelvin                                 #surface thermal expansivity
+pd.refViscosity = 1e20* u.pascal* u.second
+pd.refLength = 2900*u.km
+pd.gasConstant = 8.314*u.joule/(u.mol*u.kelvin)                   #gas constant
+pd.specificHeat = 1250.4*u.joule/(u.kilogram* u.kelvin)           #Specific heat (Jkg-1K-1)
+pd.potentialTemp = 1573.*u.kelvin                                 #mantle potential temp (K)
+pd.surfaceTemp = 273.*u.kelvin                                    #surface temp (K)
+#these are the shifted temps, which will range from 0 - 1 in the dimensionless system
+pd.potentialTemp_ = pd.potentialTemp - pd.surfaceTemp
+pd.surfaceTemp_ = pd.surfaceTemp - pd.surfaceTemp
+#main rheology parameters
+pd.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
+pd.frictionMantle = u.Quantity(0.2)                                           #mantle friction coefficient in Byerlee law (tan(phi))
+pd.frictionMantleDepth = pd.frictionMantle*pd.refDensity*pd.refGravity
+pd.diffusionPreExp = 5.34e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
+pd.diffusionEnergy = 3e5*u.joule/(u.mol)
+pd.diffusionEnergyDepth = 3e5*u.joule/(u.mol*pd.gasConstant)
+pd.diffusionVolume=5e-6*u.meter**3/(u.mol)
+pd.diffusionVolumeDepth=5e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.joule/(u.mol*pd.gasConstant*u.meter)
+pd.viscosityFault = 5e19*u.pascal   * u.second
+pd.adiabaticTempGrad = (pd.refExpansivity*pd.refGravity*pd.potentialTemp)/pd.specificHeat
+pd.yieldStressMax=200*u.megapascal
+pd.lowerMantleViscFac = u.Quantity(30.0)
+
+paramDict_dim = pd
+
+
+# In[37]:
+
+
+md = edict({})
+#Model geometry, and misc Lengths used to control behaviour
+md.depth=1000*u.km                                                #Model Depth
+md.aspectRatio=5.
+#lengths, factors relating to subduction fault behaviour
+md.faultViscDepthTaperStart = 100*u.km
+md.faultViscDepthTaperWidth = 20*u.km
+md.faultViscHorizTaperStart = 300*u.km
+md.faultViscHorizTaperWidth = 300*u.km
+md.faultThickness = 10.*u.km
+md.faultLocFac = 1.                                                #this is the relative location of the fault in terms of the fault thickess from the top of slab
+md.faultDestroyDepth = 300*u.km
+md.lowerMantleDepth=660.*u.km
+md.lowerMantleTransWidth=10.*u.km
+#Slab and plate init. parameters
+md.subZoneLoc=-100*u.km                                           #X position of subduction zone...km
+md.slabInitMaxDepth=150*u.km
+md.radiusOfCurv = 350.*u.km                                        #radius of curvature
+md.slabAge=15.*u.megayears                                      #age of subduction plate at trench
+md.opAgeAtTrench=10.*u.megayears                                        #age of op
+#numerical and computation params
+md.res=48
+md.ppc=25                                                         #particles per cell
+md.elementType="Q1/dQ0"
+md.refineHoriz = True
+md.refineVert = True
+md.meshRefineFactor = 0.7
+md.nltol = 0.01
+md.druckerAlpha = 1.
+md.penaltyMethod = True
+md.buoyancyFac = 1.0
+md.viscosityMin = 1e18* u.pascal * u.second
+md.viscosityMax = 1e25* u.pascal * u.second
+
+modelDict_dim = md
+
+
+# In[38]:
 
 
 #import parameters, model settings, unit registry, scaling system, etc
 
-from unsupported_dan.UWsubduction.minimal_example import paramDict_dim, modelDict_dim, UnitRegistry
 from unsupported_dan.UWsubduction.default_scaling import sub_scaling, build_nondim_dict
 from unsupported_dan.UWsubduction.minimal_example import rayleighNumber, stressScale, pressureDepthGrad
 
 
 #define some more concise names
-ur = UnitRegistry
 sca = sub_scaling
 ndimlz = sca.nonDimensionalize
 #build the dimensionless paramter / model dictionaries
@@ -105,14 +187,14 @@ md.res = 48
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[143]:
+# In[39]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
 
 
-# In[144]:
+# In[40]:
 
 
 yres = int(md.res)
@@ -140,7 +222,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[145]:
+# In[41]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -166,7 +248,7 @@ if md.refineVert:
 
 # ## Build plate model
 
-# In[146]:
+# In[11]:
 
 
 
@@ -175,24 +257,24 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[147]:
+# In[12]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
 vp1= ndimlz(0.*ur.centimeter/ur.year )
-vp2= ndimlz(3.*ur.centimeter/ur.year )
+vp2= ndimlz(6.*ur.centimeter/ur.year )
 vp3= ndimlz(-2.*ur.centimeter/ur.year )
 
-vb12= ndimlz(0.5*ur.centimeter/ur.year )
+vb12= ndimlz(4.0*ur.centimeter/ur.year )
 
 
-# In[148]:
+# In[14]:
 
 
 print(vp1, vp2, vp3, vb12)
 
 
-# In[149]:
+# In[15]:
 
 
 tm = TectModel(mesh, 0, endTime, plateModelDt)
@@ -202,27 +284,35 @@ tm.add_plate(2, velocities=vp2)
 tm.add_plate(3, velocities=vp3)
 
 
-# In[150]:
+# In[31]:
+
+
+ridgeLoc = -0.4
+subLoc = -0.4 + ndimlz(2000.*ur.kilometer)
+print(ridgeLoc, subLoc)
+
+
+# In[42]:
 
 
 tm.add_left_boundary(1, plateInitAge=md.slabAge/3., velocities=False)
 #tm.add_left_boundary(2, plateInitAge=0., velocities=False)
 
-tm.add_ridge(1,2, -0.6, velocities=vb12)
-tm.add_subzone(2, 3, 0.2, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrench)
+tm.add_ridge(1,2, ridgeLoc, velocities=vb12)
+tm.add_subzone(2, 3, subLoc, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrench)
 
 tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 
-# In[151]:
+# In[43]:
 
 
-#md.slabAge
+#((1400*ur.kilometer)/(35*ur.megayear)).to(ur.cm/ ur.year )
 
 
 # ## Build plate age / temperature Fns
 
-# In[152]:
+# In[44]:
 
 
 pIdFn = tm.plate_id_fn()
@@ -236,13 +326,13 @@ fnAge_map = fn.branching.map(fn_key = pIdFn ,
 #fig.show()
 
 
-# In[153]:
+# In[45]:
 
 
 #ndp.potentialTemp
 
 
-# In[154]:
+# In[46]:
 
 
 coordinate = fn.input()
@@ -257,7 +347,7 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, ndp.pote
 
 
 
-# In[155]:
+# In[47]:
 
 
 fig = glucifer.Figure(figsize=(600, 300))
@@ -267,7 +357,7 @@ fig.show()
 
 # ## Make swarm and Swarm Vars
 
-# In[156]:
+# In[48]:
 
 
 swarm = uw.swarm.Swarm(mesh=mesh, particleEscape=True)
@@ -285,7 +375,7 @@ signedDistanceVariable.data[:] = 0.0
 
 # ## Create tmUwMap
 
-# In[157]:
+# In[49]:
 
 
 #Now we have built are primary FEM / Swarm objects, we collect some of these in a dictionary,
@@ -299,7 +389,7 @@ tmUwMap = tm_uw_map([], velocityField, swarm,
 # 
 # * For more information see, `UWsubduction/Background/interface2D`
 
-# In[158]:
+# In[50]:
 
 
 def circGradientFn(S):
@@ -327,13 +417,13 @@ def circGradientFn3(S):
     
 
 
-# In[159]:
+# In[51]:
 
 
 #proxyTempVariable.data[:] =0.
 
 
-# In[160]:
+# In[52]:
 
 
 #All of these wil be needed by the slab / fault setup functions
@@ -346,7 +436,7 @@ tmUwMap = tm_uw_map([], velocityField, swarm,
                     signedDistanceVariable, proxyTempVariable, proximityVariable)
 
 
-# In[161]:
+# In[53]:
 
 
 #define fault particle spacing, here ~5 paricles per element
@@ -373,7 +463,7 @@ fnJointTemp = fn.misc.min(proxyTempVariable,plateTempProxFn)
 proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
 
 
-# In[162]:
+# In[54]:
 
 
 fig = glucifer.Figure(figsize=(600, 300))
@@ -1257,7 +1347,7 @@ while time < tm.times[-1] and step < maxSteps:
         figVel.save(    outputPath + "vel"    + str(step).zfill(4))
         
         #save out the surface velocity
-        save_files(step)
+        #save_files(step)
     
     if uw.rank()==0:
         print 'step = {0:6d}; time = {1:.3e}'.format(step,time)
