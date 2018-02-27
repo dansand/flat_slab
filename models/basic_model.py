@@ -1,17 +1,22 @@
 
 # coding: utf-8
 
-# # Velocity Bcs
+# # Mexican Flat Slab model
 # 
-# 
+# * Mor-Sz dist at 40 Ma, ~2000 km
+# * Mor-Sz dist at 0 Ma, ~600 km
+# * Mor average Vel ~ 4 cm/y
+# * UP vel ~ 2 cm/y
+# * Sp vel (35 - 10 Ma) ~ 8 cm/y
+# * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[1]:
+# In[56]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[2]:
+# In[57]:
 
 
 import numpy as np
@@ -25,7 +30,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[3]:
+# In[58]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -41,7 +46,7 @@ except:
     pass
 
 
-# In[4]:
+# In[59]:
 
 
 #load in parent stuff
@@ -50,7 +55,7 @@ import nb_load_stuff
 from tectModelClass import *
 
 
-# In[5]:
+# In[60]:
 
 
 from unsupported_dan.UWsubduction.subduction_utils import *
@@ -61,7 +66,7 @@ from unsupported_dan.interfaces.interface2D import interface2D , interface_colle
 
 # ## Create output dir structure
 
-# In[6]:
+# In[61]:
 
 
 #outputPath = os.path.join(os.path.abspath("."),"output/")
@@ -78,14 +83,14 @@ uw.barrier()
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[34]:
+# In[62]:
 
 
 from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = UnitRegistry
 
 
-# In[35]:
+# In[63]:
 
 
 #pd refers to dimensional paramters
@@ -122,7 +127,7 @@ pd.lowerMantleViscFac = u.Quantity(30.0)
 paramDict_dim = pd
 
 
-# In[37]:
+# In[64]:
 
 
 md = edict({})
@@ -162,7 +167,7 @@ md.viscosityMax = 1e25* u.pascal * u.second
 modelDict_dim = md
 
 
-# In[38]:
+# In[65]:
 
 
 #import parameters, model settings, unit registry, scaling system, etc
@@ -177,6 +182,7 @@ ndimlz = sca.nonDimensionalize
 #build the dimensionless paramter / model dictionaries
 ndp = build_nondim_dict(paramDict_dim  , sca)   
 md = build_nondim_dict(modelDict_dim  , sca)
+ur = u
 
 assert ndimlz(paramDict_dim.refLength) == 1.0
 
@@ -187,14 +193,14 @@ md.res = 48
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[39]:
+# In[66]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
 
 
-# In[40]:
+# In[67]:
 
 
 yres = int(md.res)
@@ -222,7 +228,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[41]:
+# In[68]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -248,7 +254,7 @@ if md.refineVert:
 
 # ## Build plate model
 
-# In[11]:
+# In[69]:
 
 
 
@@ -257,7 +263,7 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[12]:
+# In[70]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
@@ -268,13 +274,13 @@ vp3= ndimlz(-2.*ur.centimeter/ur.year )
 vb12= ndimlz(4.0*ur.centimeter/ur.year )
 
 
-# In[14]:
+# In[71]:
 
 
 print(vp1, vp2, vp3, vb12)
 
 
-# In[15]:
+# In[72]:
 
 
 tm = TectModel(mesh, 0, endTime, plateModelDt)
@@ -284,15 +290,15 @@ tm.add_plate(2, velocities=vp2)
 tm.add_plate(3, velocities=vp3)
 
 
-# In[31]:
+# In[73]:
 
 
-ridgeLoc = -0.4
-subLoc = -0.4 + ndimlz(2000.*ur.kilometer)
+ridgeLoc = -0.7
+subLoc = ridgeLoc  + ndimlz(2000.*ur.kilometer)
 print(ridgeLoc, subLoc)
 
 
-# In[42]:
+# In[74]:
 
 
 tm.add_left_boundary(1, plateInitAge=md.slabAge/3., velocities=False)
@@ -304,7 +310,7 @@ tm.add_subzone(2, 3, subLoc, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrenc
 tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 
-# In[43]:
+# In[75]:
 
 
 #((1400*ur.kilometer)/(35*ur.megayear)).to(ur.cm/ ur.year )
@@ -312,7 +318,7 @@ tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 # ## Build plate age / temperature Fns
 
-# In[44]:
+# In[76]:
 
 
 pIdFn = tm.plate_id_fn()
@@ -326,13 +332,13 @@ fnAge_map = fn.branching.map(fn_key = pIdFn ,
 #fig.show()
 
 
-# In[45]:
+# In[77]:
 
 
 #ndp.potentialTemp
 
 
-# In[46]:
+# In[78]:
 
 
 coordinate = fn.input()
@@ -347,17 +353,17 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, ndp.pote
 
 
 
-# In[47]:
+# In[79]:
 
 
-fig = glucifer.Figure(figsize=(600, 300))
-fig.append( glucifer.objects.Surface(tm.mesh, plateTempProxFn, onMesh = True))
-fig.show()
+#fig = glucifer.Figure(figsize=(600, 300))
+#fig.append( glucifer.objects.Surface(tm.mesh, plateTempProxFn, onMesh = True))
+#fig.show()
 
 
 # ## Make swarm and Swarm Vars
 
-# In[48]:
+# In[80]:
 
 
 swarm = uw.swarm.Swarm(mesh=mesh, particleEscape=True)
@@ -375,7 +381,7 @@ signedDistanceVariable.data[:] = 0.0
 
 # ## Create tmUwMap
 
-# In[49]:
+# In[81]:
 
 
 #Now we have built are primary FEM / Swarm objects, we collect some of these in a dictionary,
@@ -389,7 +395,7 @@ tmUwMap = tm_uw_map([], velocityField, swarm,
 # 
 # * For more information see, `UWsubduction/Background/interface2D`
 
-# In[50]:
+# In[82]:
 
 
 def circGradientFn(S):
@@ -417,13 +423,13 @@ def circGradientFn3(S):
     
 
 
-# In[51]:
+# In[83]:
 
 
 #proxyTempVariable.data[:] =0.
 
 
-# In[52]:
+# In[84]:
 
 
 #All of these wil be needed by the slab / fault setup functions
@@ -436,7 +442,7 @@ tmUwMap = tm_uw_map([], velocityField, swarm,
                     signedDistanceVariable, proxyTempVariable, proximityVariable)
 
 
-# In[53]:
+# In[85]:
 
 
 #define fault particle spacing, here ~5 paricles per element
@@ -444,7 +450,7 @@ ds = (tm.maxX - tm.minX)/(2.*tm.mesh.elementRes[0])
 
 fCollection = interface_collection([])
 
-deepDepth = ndimlz(660.*ur.kilometer)
+deepDepth = ndimlz(300.*ur.kilometer)
 
 for e in tm.undirected.edges():
     if tm.is_subduction_boundary(e):
@@ -463,13 +469,13 @@ fnJointTemp = fn.misc.min(proxyTempVariable,plateTempProxFn)
 proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
 
 
-# In[54]:
+# In[87]:
 
 
-fig = glucifer.Figure(figsize=(600, 300))
-fig.append( glucifer.objects.Points(swarm, proxyTempVariable))
+#fig = glucifer.Figure(figsize=(600, 300))
+#fig.append( glucifer.objects.Points(swarm, proxyTempVariable))
 #fig.append( glucifer.objects.Points(fb.swarm))
-fig.show()
+#fig.show()
 #fig.save_database('test.gldb')
 
 
