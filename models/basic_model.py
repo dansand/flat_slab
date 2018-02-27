@@ -16,7 +16,7 @@
 #!apt-cache policy petsc-dev
 
 
-# In[57]:
+# In[2]:
 
 
 import numpy as np
@@ -30,7 +30,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[58]:
+# In[3]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -46,16 +46,18 @@ except:
     pass
 
 
-# In[59]:
+# In[4]:
 
 
 #load in parent stuff
 #%load_ext autoreload
-import nb_load_stuff
-from tectModelClass import *
+#import nb_load_stuff
+#from tectModelClass import *
+
+from unsupported_dan.UWsubduction.model import *
 
 
-# In[60]:
+# In[5]:
 
 
 from unsupported_dan.UWsubduction.subduction_utils import *
@@ -66,7 +68,7 @@ from unsupported_dan.interfaces.interface2D import interface2D , interface_colle
 
 # ## Create output dir structure
 
-# In[61]:
+# In[6]:
 
 
 #outputPath = os.path.join(os.path.abspath("."),"output/")
@@ -83,14 +85,14 @@ uw.barrier()
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[62]:
+# In[7]:
 
 
 from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = UnitRegistry
 
 
-# In[63]:
+# In[8]:
 
 
 #pd refers to dimensional paramters
@@ -127,7 +129,7 @@ pd.lowerMantleViscFac = u.Quantity(30.0)
 paramDict_dim = pd
 
 
-# In[64]:
+# In[9]:
 
 
 md = edict({})
@@ -167,7 +169,7 @@ md.viscosityMax = 1e25* u.pascal * u.second
 modelDict_dim = md
 
 
-# In[65]:
+# In[10]:
 
 
 #import parameters, model settings, unit registry, scaling system, etc
@@ -193,14 +195,14 @@ md.res = 48
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[66]:
+# In[11]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
 
 
-# In[67]:
+# In[12]:
 
 
 yres = int(md.res)
@@ -228,7 +230,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[68]:
+# In[13]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -254,7 +256,7 @@ if md.refineVert:
 
 # ## Build plate model
 
-# In[69]:
+# In[14]:
 
 
 
@@ -263,7 +265,7 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[70]:
+# In[15]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
@@ -274,13 +276,13 @@ vp3= ndimlz(-2.*ur.centimeter/ur.year )
 vb12= ndimlz(4.0*ur.centimeter/ur.year )
 
 
-# In[71]:
+# In[16]:
 
 
 print(vp1, vp2, vp3, vb12)
 
 
-# In[72]:
+# In[17]:
 
 
 tm = TectModel(mesh, 0, endTime, plateModelDt)
