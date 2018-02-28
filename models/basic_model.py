@@ -486,7 +486,7 @@ proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
 # 
 # In this section we setup some functions to help manage the spatial distribution of faults
 
-# In[156]:
+# In[92]:
 
 
 # Setup a swarm to define the replacment positions
@@ -508,24 +508,24 @@ del allys
 ##What are we doing here??
 
 #this will be used to actively remove any fault particles around the ridge
-faultRmfn = tm.t2f(tm.variable_boundary_mask_fn(distMax = ndimlz(100*ur.km),
+faultRmfn = tm.variable_boundary_mask_fn(distMax = ndimlz(100*ur.km),
                                            distMin = ndimlz(20*ur.km), 
                                            relativeWidth = 0.1,
-                                           boundtypes='ridge'))
+                                           boundtypes='ridge')
 
 
 
 #this don;t need to mask the fault addition at all, let the removal do the work
-#faultAddFn =  tm.t2f(faultRmfn )
+#faultAddFn =  faultRmfn 
 faultAddFn =  fn.misc.constant(True)
 
 ###The following mask function provide a way of building velocity conditions within the plates,
 #This removes the regions around the ridges from the velocity nodes
-velMask1 = tm.ridge_mask_fn(dist=ndimlz(25*ur.km))
+velMask1 = tm.t2f(tm.ridge_mask_fn(dist=ndimlz(25*ur.km)))
 #This removes the regions around the subduction from the velocity nodes
-velMask2= tm.subduction_mask_fn(dist=md.faultViscHorizTaperStart)
+velMask2= tm.t2f(tm.subduction_mask_fn(dist=md.faultViscHorizTaperStart))
 #combine
-velMaskFn = operator.or_( velMask1,  velMask2)
+velMaskFn = operator.and_( velMask1,  velMask2)
 
 
 #order is very important here
@@ -534,14 +534,22 @@ velMaskFn = operator.or_( velMask1,  velMask2)
 #dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 
 
-# In[157]:
+# In[93]:
+
+
+dummy = remove_fault_drift(fCollection, faultloc)
+dummy = pop_or_perish(tm, fCollection, faultMasterSwarm, faultAddFn , ds)
+dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
+
+
+# In[94]:
 
 
 #maskFn_ = tm.t2f(faultRmfn)
 #pIdFn = tm.plate_id_fn(maskFn=maskFn_)
 
 
-# In[166]:
+# In[95]:
 
 
 #def buildPlateBoundMarkerSwarms(tectModel):
@@ -556,40 +564,34 @@ velMaskFn = operator.or_( velMask1,  velMask2)
 #    return boundSwarmList
 
 
-# In[159]:
+# In[88]:
 
 
 #boundSwarmList = buildPlateBoundMarkerSwarms(tm)
 
 
-# In[162]:
+# In[97]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
-#fig.append( glucifer.objects.Surface(tm.mesh, faultAddFn, onMesh=True))
+#fig.append( glucifer.objects.Surface(tm.mesh, velMaskFn, onMesh=True))
 #for s in boundSwarmList:
 ##    fig.append( glucifer.objects.Points(s, pointSize=5))
 #fig.show()
 #fig.save_database('test.gldb')
 
 
-# In[165]:
-
-
-
-
-
 # ## Proximity
 # 
 # 
 
-# In[35]:
+# In[38]:
 
 
 proximityVariable.data[:] = 0
 
 
-# In[53]:
+# In[39]:
 
 
 for f in fCollection:
@@ -597,13 +599,13 @@ for f in fCollection:
     f.set_proximity_director(swarm, proximityVariable, searchFac = 2., locFac=1.0)
 
 
-# In[54]:
+# In[40]:
 
 
 #update_faults()
 
 
-# In[55]:
+# In[41]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -618,7 +620,7 @@ for f in fCollection:
 #figProx.save_database('test.gldb')
 
 
-# In[56]:
+# In[42]:
 
 
 #testMM = fn.view.min_max(uw.function.input(f.swarm.particleCoordinates))
@@ -627,7 +629,7 @@ for f in fCollection:
 
 # ## Prescribed velocity
 
-# In[57]:
+# In[43]:
 
 
 def set_vel_return_nodes(time, maskFn):
@@ -653,20 +655,20 @@ def set_vel_return_nodes(time, maskFn):
     
 
 
-# In[58]:
+# In[44]:
 
 
 vXnodes = set_vel_return_nodes(0., velMaskFn)
 
 
-# In[59]:
+# In[45]:
 
 
 #np.empty(0), 
 #test = tm.mesh.specialSets['MaxJ_VertexSet']data.shape
 
 
-# In[60]:
+# In[46]:
 
 
 #check
@@ -682,7 +684,7 @@ vXnodes = set_vel_return_nodes(0., velMaskFn)
 
 # ## Project the swarm 'proxy temp' to mesh
 
-# In[61]:
+# In[47]:
 
 
 projectorMeshTemp= uw.utils.MeshVariable_Projection( temperatureField, proxyTempVariable , type=0 )
@@ -691,7 +693,7 @@ projectorMeshTemp.solve()
 
 # ## Boundary conditions
 
-# In[47]:
+# In[48]:
 
 
 iWalls = mesh.specialSets["MinI_VertexSet"] + mesh.specialSets["MaxI_VertexSet"]
@@ -705,13 +707,13 @@ bWalls = mesh.specialSets["MinJ_VertexSet"]
 #                                           indexSetsPerDof = (iWalls, jWalls) )
 
 
-# In[48]:
+# In[49]:
 
 
 #vXnodes
 
 
-# In[49]:
+# In[50]:
 
 
 def build_velBcs(nodes):
@@ -727,7 +729,7 @@ def build_velBcs(nodes):
     return velBC
 
 
-# In[50]:
+# In[51]:
 
 
 velBC = build_velBcs(vXnodes)
@@ -856,14 +858,15 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                                         2:faultRheologyFn} )
 
 
-# In[59]:
+# In[82]:
 
 
-#fig2 = glucifer.Figure(figsize=(960,300) )
+#fig = glucifer.Figure(figsize=(960,300) )
 #fig2.append( glucifer.objects.Points(swarm, mantleRheologyFn,  logScale=True))
-#fig.append( glucifer.objects.Surface(mesh, dynamicPressureProxyDepthFn))
+#fig.append( glucifer.objects.Surface(mesh, faultRheologyFn, onMesh=True))
 
-#fig2.show()
+#fig.show()
+#fig.save_database('test.gldb')
 
 
 # ## Stokes
@@ -895,7 +898,7 @@ def pressure_calibrate():
     smooth_pressure(mesh)
 
 
-# In[65]:
+# In[61]:
 
 
 stokes = uw.systems.Stokes( velocityField  = velocityField, 
@@ -905,7 +908,7 @@ stokes = uw.systems.Stokes( velocityField  = velocityField,
                                    fn_bodyforce   = buoyancyMapFn )
 
 
-# In[66]:
+# In[62]:
 
 
 solver = uw.systems.Solver(stokes)
@@ -916,20 +919,20 @@ solver.set_penalty(1.0e7)
 solver.options.scr.ksp_rtol = 1.0e-4
 
 
-# In[67]:
+# In[63]:
 
 
 solver.solve(nonLinearIterate=True, nonLinearTolerance=md.nltol, callback_post_solve = pressure_calibrate)
 solver.print_stats()
 
 
-# In[68]:
+# In[64]:
 
 
 ## Advection - Diffusion
 
 
-# In[69]:
+# In[65]:
 
 
 advDiff = uw.systems.AdvectionDiffusion( phiField       = temperatureFn, 
@@ -943,13 +946,13 @@ advDiff = uw.systems.AdvectionDiffusion( phiField       = temperatureFn,
 
 # ## Swarm Advector
 
-# In[70]:
+# In[66]:
 
 
 advector = uw.systems.SwarmAdvector( swarm=swarm, velocityField=velocityField, order=2 )
 
 
-# In[71]:
+# In[67]:
 
 
 population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006, 
@@ -959,7 +962,7 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 # ## Update functions
 
-# In[72]:
+# In[62]:
 
 
 valuesDict = edict({})
@@ -970,7 +973,7 @@ for e in tm.undirected.edges():
 valuesDict  
 
 
-# In[73]:
+# In[63]:
 
 
 # Here we'll handle everything that should be advected - i.e. every timestep
@@ -988,7 +991,7 @@ def advect_update(dt):
     return time+dt, step+1
 
 
-# In[74]:
+# In[64]:
 
 
 def update_stokes(time, viscosityMapFn ):
@@ -1017,7 +1020,7 @@ def update_stokes(time, viscosityMapFn ):
     return stokes
 
 
-# In[75]:
+# In[65]:
 
 
 def rebuild_solver(stokes):
@@ -1031,7 +1034,7 @@ def rebuild_solver(stokes):
     return solver
 
 
-# In[76]:
+# In[66]:
 
 
 def update_faults():
@@ -1055,7 +1058,7 @@ def update_faults():
     
 
 
-# In[77]:
+# In[67]:
 
 
 def update_swarm():
@@ -1073,7 +1076,7 @@ def update_swarm():
     
 
 
-# In[78]:
+# In[68]:
 
 
 outputPath = os.path.join(os.path.abspath("."),"output/files")
@@ -1095,7 +1098,7 @@ def save_files(step):
     surfVx.save( "output/files/surfVx_" + str(step).zfill(3) + "_.h5")
 
 
-# In[79]:
+# In[69]:
 
 
 def update_tect_model(tectModel, tmUwMap, time, dt = 0.0 ):
@@ -1122,33 +1125,31 @@ def update_tect_model(tectModel, tmUwMap, time, dt = 0.0 ):
             pass
 
 
-# In[80]:
+# In[70]:
 
 
 #update_tect_model(tm, tmUwMap, 0., dt = 0.1 )
 
 
-# In[81]:
+# In[71]:
 
 
 def update_mask_fns():
 
-    faultRmfn = tm.t2f(tm.variable_boundary_mask_fn(distMax = ndimlz(100*ur.km),
+    faultRmfn = tm.variable_boundary_mask_fn(distMax = ndimlz(100*ur.km),
                                                distMin = ndimlz(20*ur.km), 
                                                relativeWidth = 0.1,
-                                               boundtypes='ridge'))
+                                               boundtypes='ridge')
 
 
 
     faultAddFn =  fn.misc.constant(True)
 
-    velMask1 = tm.ridge_mask_fn(dist=ndimlz(25*ur.km))
-    velMask2= tm.subduction_mask_fn(dist=md.faultViscHorizTaperStart)
+    velMask1 = tm.t2f(tm.ridge_mask_fn(dist=ndimlz(25*ur.km)))
+    velMask2= tm.t2f(tm.subduction_mask_fn(dist=md.faultViscHorizTaperStart))
     velMaskFn = operator.or_( velMask1,  velMask2)
 
 
-    
-    
     #the following dictates where the fault rheology will be activated
     subZoneDistfn = tm.subZoneAbsDistFn(upper=True)
     
@@ -1158,7 +1159,7 @@ def update_mask_fns():
     return faultRmfn, faultAddFn, velMaskFn, faultHorizTaperFn
 
 
-# In[82]:
+# In[72]:
 
 
 #ridgeMaskFn, boundMaskFn, velMaskFn = update_mask_fns()
@@ -1166,7 +1167,7 @@ def update_mask_fns():
 
 # ## Track the values of the plate bounaries
 
-# In[83]:
+# In[73]:
 
 
 def update_values():
@@ -1201,7 +1202,7 @@ def update_values():
     
 
 
-# In[84]:
+# In[74]:
 
 
 #valuesDict  
@@ -1210,7 +1211,7 @@ def update_values():
 
 # ## Viz
 
-# In[85]:
+# In[75]:
 
 
 outputPath = os.path.join(os.path.abspath("."),"output/")
@@ -1222,7 +1223,7 @@ if uw.rank()==0:
 uw.barrier()
 
 
-# In[78]:
+# In[76]:
 
 
 viscSwarmVar =  swarm.add_variable( dataType="double", count=1 )
@@ -1230,7 +1231,7 @@ viscSwarmVar.data[:] = viscosityMapFn.evaluate(swarm)
 
 
 maskFnVar1 = uw.mesh.MeshVariable( mesh=mesh, nodeDofCount=1 )
-maskFnVar1.data[:] = faultAddFn.evaluate(mesh)
+maskFnVar1.data[:] = velMaskFn.evaluate(mesh)
 
 
 maskFnVar2 = uw.mesh.MeshVariable( mesh=mesh, nodeDofCount=1 )
@@ -1241,7 +1242,7 @@ maskFnVar3 = uw.mesh.MeshVariable( mesh=mesh, nodeDofCount=1 )
 maskFnVar3.data[:] = plate_id_fn.evaluate(mesh)
 
 
-# In[79]:
+# In[77]:
 
 
 store1 = glucifer.Store('output/subduction1')
@@ -1249,10 +1250,15 @@ store2 = glucifer.Store('output/subduction2')
 store3 = glucifer.Store('output/subduction3')
 
 
-figTemp = glucifer.Figure(store1, figsize=(960,300) )
-figTemp.append( glucifer.objects.Surface(mesh, temperatureField, onMesh=True))
-figTemp.append( glucifer.objects.Contours(mesh, temperatureField, resolution=300, quality =4, interval=0.2,  colours='Black', colourBar=False)) 
+#figTemp = glucifer.Figure(store1, figsize=(960,300) )
+#figTemp.append( glucifer.objects.Surface(mesh, temperatureField, onMesh=True))
+#figTemp.append( glucifer.objects.Contours(mesh, temperatureField, resolution=300, quality =4, interval=0.2,  colours='Black', colourBar=False)) 
 
+figProx = glucifer.Figure(store1, figsize=(960,300) )
+figProx.append( glucifer.objects.Points(swarm , proximityVariable))
+for f in fCollection:
+    figProx.append( glucifer.objects.Points(f.swarm, pointSize=5))
+#figProx.show()
 
 figVisc = glucifer.Figure( store2, figsize=(960,300) )
 #figVisc.append( glucifer.objects.Points(swarm, viscosityMapFn, pointSize=2, logScale=True) )
@@ -1271,19 +1277,19 @@ figMask.append( glucifer.objects.Surface(mesh, maskFnVar3 , valueRange=[0,3]) )
 
 
 #figMask.append( glucifer.objects.Surface(mesh,  maskFnVar3) )
-for f in fCollection:
-    figVel.append( glucifer.objects.Points(f.swarm, pointSize=5))
+#for f in fCollection:
+#    figVel.append( glucifer.objects.Points(f.swarm, pointSize=5))
 
 
 
-# In[81]:
+# In[80]:
 
 
 #figVisc.show()
 #figVisc.save_database('test.gldb')
 
 
-# In[44]:
+# In[ ]:
 
 
 #1e-2*2900.
@@ -1297,7 +1303,7 @@ for f in fCollection:
 time = 0.  # Initial time
 step = 0 
 maxSteps = 2000      # Maximum timesteps 
-steps_output = 10   # output every N timesteps
+steps_output = 5   # output every N timesteps
 swarm_update = 10   # output every N timesteps
 faults_update = 10
 dt_model = 0.
@@ -1361,14 +1367,15 @@ while time < tm.times[-1] and step < maxSteps:
         
         #also update this guy for viz
         viscSwarmVar.data[:] = viscosityMapFn.evaluate(swarm)
-        maskFnVar1.data[:] = faultAddFn.evaluate(mesh)
+        maskFnVar1.data[:] = velMaskFn.evaluate(mesh)
         maskFnVar2.data[:] = faultRmfn.evaluate(mesh)
         maskFnVar3.data[:] = plate_id_fn.evaluate(mesh)
         
         store1.step = step
         store2.step = step
         store3.step = step
-        figTemp.save(    outputPath + "temp"    + str(step).zfill(4))
+        #figTemp.save(    outputPath + "temp"    + str(step).zfill(4))
+        figProx.save(    outputPath + "prox"    + str(step).zfill(4))
         figVisc.save(    outputPath + "visc"    + str(step).zfill(4))
         figMask.save(    outputPath + "mask"    + str(step).zfill(4))
         #figVel.save(    outputPath + "vel"    + str(step).zfill(4))
