@@ -1147,7 +1147,7 @@ def update_mask_fns():
 
     velMask1 = tm.t2f(tm.ridge_mask_fn(dist=ndimlz(25*ur.km)))
     velMask2= tm.t2f(tm.subduction_mask_fn(dist=md.faultViscHorizTaperStart))
-    velMaskFn = operator.or_( velMask1,  velMask2)
+    velMaskFn = operator.and_( velMask1,  velMask2)
 
 
     #the following dictates where the fault rheology will be activated
@@ -1250,14 +1250,14 @@ store2 = glucifer.Store('output/subduction2')
 store3 = glucifer.Store('output/subduction3')
 
 
-#figTemp = glucifer.Figure(store1, figsize=(960,300) )
-#figTemp.append( glucifer.objects.Surface(mesh, temperatureField, onMesh=True))
-#figTemp.append( glucifer.objects.Contours(mesh, temperatureField, resolution=300, quality =4, interval=0.2,  colours='Black', colourBar=False)) 
+figTemp = glucifer.Figure(store1, figsize=(960,300) )
+figTemp.append( glucifer.objects.Surface(mesh, temperatureField, onMesh=True))
+figTemp.append( glucifer.objects.Contours(mesh, temperatureField, resolution=300, quality =4, interval=0.2,  colours='Black', colourBar=False)) 
 
-figProx = glucifer.Figure(store1, figsize=(960,300) )
-figProx.append( glucifer.objects.Points(swarm , proximityVariable))
-for f in fCollection:
-    figProx.append( glucifer.objects.Points(f.swarm, pointSize=5))
+#figProx = glucifer.Figure(store1, figsize=(960,300) )
+#figProx.append( glucifer.objects.Points(swarm , proximityVariable))
+#for f in fCollection:
+#    figProx.append( glucifer.objects.Points(f.swarm, pointSize=5))
 #figProx.show()
 
 figVisc = glucifer.Figure( store2, figsize=(960,300) )
@@ -1374,8 +1374,8 @@ while time < tm.times[-1] and step < maxSteps:
         store1.step = step
         store2.step = step
         store3.step = step
-        #figTemp.save(    outputPath + "temp"    + str(step).zfill(4))
-        figProx.save(    outputPath + "prox"    + str(step).zfill(4))
+        figTemp.save(    outputPath + "temp"    + str(step).zfill(4))
+        #figProx.save(    outputPath + "prox"    + str(step).zfill(4))
         figVisc.save(    outputPath + "visc"    + str(step).zfill(4))
         figMask.save(    outputPath + "mask"    + str(step).zfill(4))
         #figVel.save(    outputPath + "vel"    + str(step).zfill(4))
