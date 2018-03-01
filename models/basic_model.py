@@ -1158,6 +1158,10 @@ def advect_update(dt):
     #Advect faults
     for f in fCollection:
         f.advection(dt)
+        
+    #Advect markers
+    for m in mCollection:
+        m.advection(dt)
     
     
     return time+dt, step+1
