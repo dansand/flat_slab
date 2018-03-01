@@ -513,8 +513,8 @@ tmUwMap = tm_uw_map([], velocityField, swarm,
 # In[37]:
 
 
-#define fault particle spacing, here ~5 paricles per element
-ds = (tm.maxX - tm.minX)/(2.*tm.mesh.elementRes[0])
+#define fault particle spacing
+ds = (tm.maxX - tm.minX)/(8.*tm.mesh.elementRes[0])
 
 fCollection = interface_collection([])
 
