@@ -882,7 +882,7 @@ buoyancyMapFn = thermalDensityFn*gravity
 
 # ## Rheology
 
-# In[60]:
+# In[115]:
 
 
 symStrainrate = fn.tensor.symmetric( 
@@ -899,7 +899,7 @@ def safe_visc(func, viscmin=md.viscosityMin, viscmax=md.viscosityMax):
     return fn.misc.max(viscmin, fn.misc.min(viscmax, func))
 
 
-# In[61]:
+# In[116]:
 
 
 #Interface rheology extent
@@ -913,7 +913,7 @@ faultDepthTaperFn = cosine_taper(depthFn,
                                  md.faultViscDepthTaperStart, md.faultViscDepthTaperWidth)
 
 
-# In[62]:
+# In[117]:
 
 
 #temperatureField, 
@@ -922,7 +922,7 @@ ndp.diffusionPreExp, ndp.diffusionVolumeDepth, ndp.diffusionEnergyDepth, ndp.sur
 #(1./ndp.diffusionPreExp)
 
 
-# In[63]:
+# In[118]:
 
 
 
@@ -960,7 +960,7 @@ faultViscosityFn = ndp.viscosityFault
 faultRheologyFn =  faultViscosityFn*(1. - faultDepthTaperFn) +                         faultDepthTaperFn*mantleRheologyFn + faultHorizTaperFn*mantleRheologyFn
 
 
-# In[64]:
+# In[119]:
 
 
 #Here's how we include the wedge 
@@ -969,7 +969,7 @@ mantleRheologyFn_ = fn.branching.map( fn_key = wedgeVariable,
                                             1:mantleRheologyFn} )
 
 
-# In[65]:
+# In[120]:
 
 
 #viscconds = ((proximityVariable == 0, mantleRheologyFn),
@@ -984,13 +984,13 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                                         2:faultRheologyFn} )
 
 
-# In[66]:
+# In[121]:
 
 
 #md.wedgeViscosity
 
 
-# In[67]:
+# In[122]:
 
 
 #fig = glucifer.Figure(figsize=(960,300) )
@@ -1001,13 +1001,13 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
 #fig.save_database('test.gldb')
 
 
-# In[68]:
+# In[123]:
 
 
 #fig.save_database('test.gldb')
 
 
-# In[69]:
+# In[124]:
 
 
 #ndimlz(1.0*ur.megayear)
@@ -1015,7 +1015,7 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
 
 # ## Stokes
 
-# In[75]:
+# In[125]:
 
 
 surfaceArea = uw.utils.Integral(fn=1.0,mesh=mesh, integrationType='surface', surfaceIndexSet=tWalls)
@@ -1042,7 +1042,7 @@ def pressure_calibrate():
     smooth_pressure(mesh)
 
 
-# In[76]:
+# In[126]:
 
 
 stokes = uw.systems.Stokes( velocityField  = velocityField, 
@@ -1052,7 +1052,7 @@ stokes = uw.systems.Stokes( velocityField  = velocityField,
                                    fn_bodyforce   = buoyancyMapFn )
 
 
-# In[62]:
+# In[127]:
 
 
 solver = uw.systems.Solver(stokes)
@@ -1063,7 +1063,7 @@ solver.set_penalty(1.0e7)
 solver.options.scr.ksp_rtol = 1.0e-4
 
 
-# In[63]:
+# In[128]:
 
 
 solver.solve(nonLinearIterate=True, nonLinearTolerance=md.nltol, callback_post_solve = pressure_calibrate)
@@ -1108,7 +1108,7 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 # ## Set up a midplane swarm
 
-# In[95]:
+# In[101]:
 
 
 spId = 2
@@ -1132,17 +1132,18 @@ del allys
 
 
 
-# In[96]:
+# In[110]:
 
 
+#dummy = pop_or_perish(tm, mCollection, midPlaneMasterSwarm, faultAddFn , ds)
 dummy = remove_faults_from_boundaries(tm, mCollection, faultRmfn )
 
 
-# In[98]:
+# In[114]:
 
 
 #fig = glucifer.Figure(figsize=(960,300) )
-#fig.append( glucifer.objects.Surface(mesh, faultRmfn))
+#fig.append( glucifer.objects.Surface(mesh, faultRmfn ))
 #fig.append( glucifer.objects.Points( mCollection[0].swarm))
 #fig.show()
 
@@ -1225,7 +1226,7 @@ def rebuild_solver(stokes):
     return solver
 
 
-# In[66]:
+# In[ ]:
 
 
 def update_faults():
@@ -1240,13 +1241,13 @@ def update_faults():
     for f in fCollection:
         
         #Remove particles below a specified depth
-        depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - md.faultDestroyDepth)
+        #depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - md.faultDestroyDepth)
+        depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - md.wedgeDeep)
         with f.swarm.deform_swarm():
             f.swarm.particleCoordinates.data[depthMask] = (9999999., 9999999.)
         
         #The repair_interface2D routine is supposed to maintain particle density and smooth
         repair_interface2D(f, ds, k=8)
-    
 
 
 # In[195]:
@@ -1271,30 +1272,6 @@ def update_markers():
         #The repair_interface2D routine is supposed to maintain particle density and smooth
         repair_interface2D(f, ds, k=8)
     
-
-
-# In[ ]:
-
-
-def update_faults():
-    
-    
-    #order is very important here
-    dummy = remove_fault_drift(fCollection, faultloc)
-    dummy = pop_or_perish(tm, fCollection, faultMasterSwarm, faultAddFn , ds)
-    dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
-    
-    
-    for f in fCollection:
-        
-        #Remove particles below a specified depth
-        #depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - md.faultDestroyDepth)
-        depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - md.wedgeDeep)
-        with f.swarm.deform_swarm():
-            f.swarm.particleCoordinates.data[depthMask] = (9999999., 9999999.)
-        
-        #The repair_interface2D routine is supposed to maintain particle density and smooth
-        repair_interface2D(f, ds, k=8)
 
 
 # In[67]:
@@ -1442,7 +1419,7 @@ def update_values():
     
 
 
-# In[72]:
+# In[133]:
 
 
 #sigXXswarm =  2.*symStrainrate[0]*viscosityMapFn
@@ -1460,10 +1437,17 @@ def swarm_to_mesh_update():
     viscMesh.data[:,0] =  np.average(viscosityMapFn.evaluate(swarm)[:,0][ix1], weights=weights1, axis=len((weights1.shape)) - 1)
     #sigXXFn may need updating?
     sigXXFn = 2.*symStrainrate[0]*viscMesh
-    sigXXMesh = sigXXFn.evaluate(mesh)
+    sigXXMesh.data[:] = sigXXFn.evaluate(mesh)
 
 
-# In[75]:
+# In[139]:
+
+
+sigXXFn = 2.*symStrainrate[0]*viscMesh
+sigXXMesh.data[:] = sigXXFn.evaluate(mesh)
+
+
+# In[135]:
 
 
 #step = 0
@@ -1471,12 +1455,12 @@ def swarm_to_mesh_update():
 swarm_to_mesh_update()
 
 
-# In[81]:
+# In[138]:
 
 
-#fig = glucifer.Figure(figsize=(960,300) )
-#fig.append( glucifer.objects.Surface(mesh, viscMesh, logScale=True, onMesh=True))
-#fig.show()
+fig = glucifer.Figure(figsize=(960,300) )
+fig.append( glucifer.objects.Surface(mesh, sigXXFn , onMesh=True))
+fig.show()
 
 
 # In[203]:
