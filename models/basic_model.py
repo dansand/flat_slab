@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[208]:
+# In[1]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[209]:
+# In[2]:
 
 
 import numpy as np
@@ -30,7 +30,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[210]:
+# In[3]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -46,7 +46,7 @@ except:
     pass
 
 
-# In[211]:
+# In[4]:
 
 
 #load in parent stuff
@@ -57,7 +57,7 @@ except:
 from unsupported_dan.UWsubduction.model import *
 
 
-# In[212]:
+# In[5]:
 
 
 from unsupported_dan.UWsubduction.subduction_utils import *
@@ -69,7 +69,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[213]:
+# In[6]:
 
 
 ############
@@ -131,14 +131,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[214]:
+# In[7]:
 
 
 from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = UnitRegistry
 
 
-# In[215]:
+# In[8]:
 
 
 #pd refers to dimensional paramters
@@ -175,7 +175,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 paramDict_dim = pd
 
 
-# In[216]:
+# In[9]:
 
 
 md = edict({})
@@ -220,7 +220,7 @@ md.turnOnWedge = 20*u.megayears
 modelDict_dim = md
 
 
-# In[217]:
+# In[10]:
 
 
 #import parameters, model settings, unit registry, scaling system, etc
@@ -244,14 +244,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 #md.res = 48
 
 
-# In[218]:
+# In[11]:
 
 
 #1./ndimlz(1.*ur.megapascal)
 #1./ndimlz(1.*ur.megayear)
 
 
-# In[219]:
+# In[12]:
 
 
 #delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
@@ -260,14 +260,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[220]:
+# In[13]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
 
 
-# In[221]:
+# In[14]:
 
 
 yres = int(md.res)
@@ -295,7 +295,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[222]:
+# In[15]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -321,7 +321,7 @@ if md.refineVert:
 
 # ## Build plate model
 
-# In[223]:
+# In[16]:
 
 
 endTime = ndimlz(40*ur.megayear) 
@@ -329,30 +329,35 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[224]:
+# In[34]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
 vp1= ndimlz(0.*ur.centimeter/ur.year )
-vp2= ndimlz(6.*ur.centimeter/ur.year )
 vp3= ndimlz(-2.*ur.centimeter/ur.year )
 
 vb12= ndimlz(2.0*ur.centimeter/ur.year )
 
 
-# In[225]:
+vp2start= ndimlz(6.*ur.centimeter/ur.year )
+vp2end= ndimlz(0.*ur.centimeter/ur.year )
+velsP2 = np.linspace(vp2start, vp2end, len(tm.times))
 
 
-print(vp1, vp2, vp3, vb12)
+# In[35]:
 
 
-# In[226]:
+#len(tm.times), len(velsP2)
+
+
+# In[36]:
 
 
 tm = TectModel(mesh, 0, endTime, plateModelDt)
 
 tm.add_plate(1, velocities=vp1)
-tm.add_plate(2, velocities=vp2)
+#tm.add_plate(2, velocities=vp2start)
+tm.add_plate(2, velocities=velsP2)
 tm.add_plate(3, velocities=vp3)
 
 
