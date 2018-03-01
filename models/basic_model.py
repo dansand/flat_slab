@@ -196,7 +196,7 @@ md.lowerMantleTransWidth=100.*u.km
 md.subZoneLoc=-100*u.km                                           #X position of subduction zone...km
 md.slabInitMaxDepth=150*u.km
 md.radiusOfCurv = 200.*u.km                                        #radius of curvature
-md.slabAge=15.*u.megayears                                      #age of subduction plate at trench
+md.slabAge=20.*u.megayears                                      #age of subduction plate at trench
 md.opAgeAtTrench=10.*u.megayears                                        #age of op
 #numerical and computation params
 md.res=48
@@ -337,7 +337,7 @@ vp1= ndimlz(0.*ur.centimeter/ur.year )
 vp2= ndimlz(6.*ur.centimeter/ur.year )
 vp3= ndimlz(-2.*ur.centimeter/ur.year )
 
-vb12= ndimlz(4.0*ur.centimeter/ur.year )
+vb12= ndimlz(2.0*ur.centimeter/ur.year )
 
 
 # In[23]:
