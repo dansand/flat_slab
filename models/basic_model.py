@@ -1309,7 +1309,8 @@ uw.barrier()
 
 surfacexs = mesh.data[tWalls.data][:,0]
 surfaceys = mesh.data[tWalls.data][:,1]
-surfLine = interface2D(mesh, velocityField,surfacexs, surfaceys , 0,  99)
+#note that the plate ID needs to be the same as the SP for remove faults from boundaries to work
+surfLine = interface2D(mesh, velocityField,surfacexs, surfaceys , 0,  2) #
 surfVx = uw.swarm.SwarmVariable(surfLine.swarm, 'double', 1)
 
 def save_files(step):
