@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[1]:
+# In[208]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[2]:
+# In[209]:
 
 
 import numpy as np
@@ -30,7 +30,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[3]:
+# In[210]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -46,7 +46,7 @@ except:
     pass
 
 
-# In[4]:
+# In[211]:
 
 
 #load in parent stuff
@@ -57,7 +57,7 @@ except:
 from unsupported_dan.UWsubduction.model import *
 
 
-# In[5]:
+# In[212]:
 
 
 from unsupported_dan.UWsubduction.subduction_utils import *
@@ -69,7 +69,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[6]:
+# In[213]:
 
 
 ############
@@ -131,14 +131,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[7]:
+# In[214]:
 
 
 from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = UnitRegistry
 
 
-# In[8]:
+# In[215]:
 
 
 #pd refers to dimensional paramters
@@ -175,7 +175,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 paramDict_dim = pd
 
 
-# In[9]:
+# In[216]:
 
 
 md = edict({})
@@ -220,7 +220,7 @@ md.turnOnWedge = 20*u.megayears
 modelDict_dim = md
 
 
-# In[10]:
+# In[217]:
 
 
 #import parameters, model settings, unit registry, scaling system, etc
@@ -244,30 +244,30 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 #md.res = 48
 
 
-# In[11]:
+# In[218]:
 
 
 #1./ndimlz(1.*ur.megapascal)
 #1./ndimlz(1.*ur.megayear)
 
 
-# In[12]:
+# In[219]:
 
 
-#delt = (4*ur.centimeter/ur.year)*40*ur.megayear
-#delt.to(ur.kilometer)
+#delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
+#delt.to(ur.megayear)
 
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[13]:
+# In[220]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
 
 
-# In[14]:
+# In[221]:
 
 
 yres = int(md.res)
@@ -295,7 +295,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[15]:
+# In[222]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -321,7 +321,7 @@ if md.refineVert:
 
 # ## Build plate model
 
-# In[16]:
+# In[223]:
 
 
 endTime = ndimlz(40*ur.megayear) 
@@ -329,7 +329,7 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[17]:
+# In[224]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
@@ -340,13 +340,13 @@ vp3= ndimlz(-2.*ur.centimeter/ur.year )
 vb12= ndimlz(2.0*ur.centimeter/ur.year )
 
 
-# In[18]:
+# In[225]:
 
 
 print(vp1, vp2, vp3, vb12)
 
 
-# In[19]:
+# In[226]:
 
 
 tm = TectModel(mesh, 0, endTime, plateModelDt)
@@ -356,7 +356,7 @@ tm.add_plate(2, velocities=vp2)
 tm.add_plate(3, velocities=vp3)
 
 
-# In[20]:
+# In[227]:
 
 
 ridgeLoc = -0.7
@@ -364,7 +364,7 @@ subLoc = ridgeLoc  + ndimlz(2000.*ur.kilometer)
 print(ridgeLoc, subLoc)
 
 
-# In[21]:
+# In[228]:
 
 
 tm.add_left_boundary(1, plateInitAge=md.slabAge/3., velocities=False)
@@ -376,7 +376,7 @@ tm.add_subzone(2, 3, subLoc, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrenc
 tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 
-# In[22]:
+# In[229]:
 
 
 #((1400*ur.kilometer)/(35*ur.megayear)).to(ur.cm/ ur.year )
@@ -384,7 +384,7 @@ tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 # ## Build plate age / temperature Fns
 
-# In[23]:
+# In[230]:
 
 
 pIdFn = tm.plate_id_fn()
@@ -398,13 +398,13 @@ fnAge_map = fn.branching.map(fn_key = pIdFn ,
 #fig.show()
 
 
-# In[24]:
+# In[231]:
 
 
 #ndp.potentialTemp
 
 
-# In[25]:
+# In[232]:
 
 
 coordinate = fn.input()
@@ -419,7 +419,7 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, ndp.pote
 
 
 
-# In[26]:
+# In[233]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -429,7 +429,7 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, ndp.pote
 
 # ## Make swarm and Swarm Vars
 
-# In[27]:
+# In[234]:
 
 
 swarm = uw.swarm.Swarm(mesh=mesh, particleEscape=True)
@@ -442,14 +442,14 @@ wedgeVariable = swarm.add_variable( dataType="int", count=1 )
 
 #
 proxyTempVariable.data[:] = 1.0
-proximityVariable.data[:] = 0.0
+proximityVariable.data[:] = 0
 signedDistanceVariable.data[:] = 0.0
 wedgeVariable.data[:] = 0
 
 
 # ## Create tmUwMap
 
-# In[28]:
+# In[235]:
 
 
 #Now we have built are primary FEM / Swarm objects, we collect some of these in a dictionary,
@@ -463,7 +463,7 @@ tmUwMap = tm_uw_map([], velocityField, swarm,
 # 
 # * For more information see, `UWsubduction/Background/interface2D`
 
-# In[29]:
+# In[236]:
 
 
 def circGradientFn(S):
@@ -491,13 +491,13 @@ def circGradientFn3(S):
     
 
 
-# In[30]:
+# In[237]:
 
 
 #proxyTempVariable.data[:] =0.
 
 
-# In[31]:
+# In[238]:
 
 
 #All of these wil be needed by the slab / fault setup functions
@@ -510,7 +510,7 @@ tmUwMap = tm_uw_map([], velocityField, swarm,
                     signedDistanceVariable, proxyTempVariable, proximityVariable)
 
 
-# In[32]:
+# In[239]:
 
 
 #define fault particle spacing
@@ -537,7 +537,7 @@ fnJointTemp = fn.misc.min(proxyTempVariable,plateTempProxFn)
 proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
 
 
-# In[33]:
+# In[240]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -552,7 +552,7 @@ proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
 # 
 # In this section we setup some functions to help manage the spatial distribution of faults
 
-# In[34]:
+# In[241]:
 
 
 # Setup a swarm to define the replacment positions
@@ -600,7 +600,7 @@ velMaskFn = operator.and_( velMask1,  velMask2)
 #dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 
 
-# In[35]:
+# In[242]:
 
 
 dummy = remove_fault_drift(fCollection, faultloc)
@@ -608,14 +608,14 @@ dummy = pop_or_perish(tm, fCollection, faultMasterSwarm, faultAddFn , ds)
 dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 
 
-# In[36]:
+# In[243]:
 
 
 #maskFn_ = tm.t2f(faultRmfn)
 #pIdFn = tm.plate_id_fn(maskFn=maskFn_)
 
 
-# In[37]:
+# In[244]:
 
 
 #def buildPlateBoundMarkerSwarms(tectModel):
@@ -630,13 +630,13 @@ dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 #    return boundSwarmList
 
 
-# In[38]:
+# In[245]:
 
 
 #boundSwarmList = buildPlateBoundMarkerSwarms(tm)
 
 
-# In[39]:
+# In[246]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -651,13 +651,13 @@ dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 # 
 # 
 
-# In[40]:
+# In[247]:
 
 
 proximityVariable.data[:] = 0
 
 
-# In[41]:
+# In[248]:
 
 
 for f in fCollection:
@@ -665,13 +665,13 @@ for f in fCollection:
     f.set_proximity_director(swarm, proximityVariable, searchFac = 2., locFac=1.0)
 
 
-# In[42]:
+# In[249]:
 
 
 #update_faults()
 
 
-# In[43]:
+# In[250]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -686,7 +686,7 @@ for f in fCollection:
 #figProx.save_database('test.gldb')
 
 
-# In[44]:
+# In[251]:
 
 
 #testMM = fn.view.min_max(uw.function.input(f.swarm.particleCoordinates))
@@ -695,13 +695,13 @@ for f in fCollection:
 
 # ## Define Wedge region
 
-# In[45]:
+# In[252]:
 
 
 #md.faultThickness, md.wedgeThickness
 
 
-# In[46]:
+# In[253]:
 
 
 wedgeVariable.data[:] = 0
@@ -727,7 +727,7 @@ def build_wedge_region():
         wedgeVariable.data[mask3 ] = 0
 
 
-# In[47]:
+# In[254]:
 
 
 #build this guy here so it has contains both 0s and 1s - 
@@ -736,7 +736,7 @@ def build_wedge_region():
 build_wedge_region()
 
 
-# In[48]:
+# In[255]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -746,7 +746,7 @@ build_wedge_region()
 
 # ## Prescribed velocity
 
-# In[49]:
+# In[256]:
 
 
 def set_vel_return_nodes(time, maskFn):
@@ -772,20 +772,20 @@ def set_vel_return_nodes(time, maskFn):
     
 
 
-# In[50]:
+# In[257]:
 
 
 vXnodes = set_vel_return_nodes(0., velMaskFn)
 
 
-# In[51]:
+# In[258]:
 
 
 #np.empty(0), 
 #test = tm.mesh.specialSets['MaxJ_VertexSet']data.shape
 
 
-# In[52]:
+# In[259]:
 
 
 #check
@@ -801,7 +801,7 @@ vXnodes = set_vel_return_nodes(0., velMaskFn)
 
 # ## Project the swarm 'proxy temp' to mesh
 
-# In[53]:
+# In[260]:
 
 
 projectorMeshTemp= uw.utils.MeshVariable_Projection( temperatureField, proxyTempVariable , type=0 )
@@ -810,7 +810,7 @@ projectorMeshTemp.solve()
 
 # ## Boundary conditions
 
-# In[54]:
+# In[261]:
 
 
 iWalls = mesh.specialSets["MinI_VertexSet"] + mesh.specialSets["MaxI_VertexSet"]
@@ -824,13 +824,13 @@ bWalls = mesh.specialSets["MinJ_VertexSet"]
 #                                           indexSetsPerDof = (iWalls, jWalls) )
 
 
-# In[55]:
+# In[262]:
 
 
 #vXnodes
 
 
-# In[56]:
+# In[263]:
 
 
 def build_velBcs(nodes):
@@ -846,13 +846,13 @@ def build_velBcs(nodes):
     return velBC
 
 
-# In[57]:
+# In[264]:
 
 
 velBC = build_velBcs(vXnodes)
 
 
-# In[58]:
+# In[265]:
 
 
 #Ridges enforced
@@ -866,7 +866,7 @@ temperatureField.data[iWalls.data] = ndp.potentialTemp_
 
 # ## Bouyancy
 
-# In[59]:
+# In[266]:
 
 
 temperatureFn = temperatureField
@@ -882,7 +882,7 @@ buoyancyMapFn = thermalDensityFn*gravity
 
 # ## Rheology
 
-# In[115]:
+# In[267]:
 
 
 symStrainrate = fn.tensor.symmetric( 
@@ -899,7 +899,7 @@ def safe_visc(func, viscmin=md.viscosityMin, viscmax=md.viscosityMax):
     return fn.misc.max(viscmin, fn.misc.min(viscmax, func))
 
 
-# In[116]:
+# In[268]:
 
 
 #Interface rheology extent
@@ -913,7 +913,7 @@ faultDepthTaperFn = cosine_taper(depthFn,
                                  md.faultViscDepthTaperStart, md.faultViscDepthTaperWidth)
 
 
-# In[117]:
+# In[269]:
 
 
 #temperatureField, 
@@ -922,7 +922,7 @@ ndp.diffusionPreExp, ndp.diffusionVolumeDepth, ndp.diffusionEnergyDepth, ndp.sur
 #(1./ndp.diffusionPreExp)
 
 
-# In[118]:
+# In[270]:
 
 
 
@@ -960,7 +960,13 @@ faultViscosityFn = ndp.viscosityFault
 faultRheologyFn =  faultViscosityFn*(1. - faultDepthTaperFn) +                         faultDepthTaperFn*mantleRheologyFn + faultHorizTaperFn*mantleRheologyFn
 
 
-# In[119]:
+# In[280]:
+
+
+#(md.lowerMantleDepth - 0.5*md.lowerMantleTransWidth )*2900.0
+
+
+# In[271]:
 
 
 #Here's how we include the wedge 
@@ -969,7 +975,7 @@ mantleRheologyFn_ = fn.branching.map( fn_key = wedgeVariable,
                                             1:mantleRheologyFn} )
 
 
-# In[120]:
+# In[272]:
 
 
 #viscconds = ((proximityVariable == 0, mantleRheologyFn),
@@ -984,30 +990,30 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                                         2:faultRheologyFn} )
 
 
-# In[121]:
+# In[273]:
 
 
 #md.wedgeViscosity
 
 
-# In[122]:
+# In[278]:
 
 
 #fig = glucifer.Figure(figsize=(960,300) )
 #fig.append( glucifer.objects.Points(swarm, mantleRheologyFn_,  logScale=True))
-#fig.append( glucifer.objects.Surface(mesh, viscMesh, logScale=True, onMesh=True))
+#fig.append( glucifer.objects.Surface(mesh, transitionZoneTaperFn , onMesh=True))
 
 #fig.show()
 #fig.save_database('test.gldb')
 
 
-# In[123]:
+# In[275]:
 
 
 #fig.save_database('test.gldb')
 
 
-# In[124]:
+# In[276]:
 
 
 #ndimlz(1.0*ur.megayear)
@@ -1108,7 +1114,7 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 # ## Set up a midplane swarm
 
-# In[101]:
+# In[142]:
 
 
 spId = 2
@@ -1132,20 +1138,34 @@ del allys
 
 
 
-# In[110]:
+# In[149]:
 
 
+#testFn = tm.xFn > -10.
 #dummy = pop_or_perish(tm, mCollection, midPlaneMasterSwarm, faultAddFn , ds)
-dummy = remove_faults_from_boundaries(tm, mCollection, faultRmfn )
+#dummy = remove_faults_from_boundaries(tm, mCollection, testFn  )
 
 
-# In[114]:
+# In[186]:
 
 
 #fig = glucifer.Figure(figsize=(960,300) )
-#fig.append( glucifer.objects.Surface(mesh, faultRmfn ))
+#fig.append( glucifer.objects.Surface(mesh, parallelMeshVariable[0], onMesh=True))
 #fig.append( glucifer.objects.Points( mCollection[0].swarm))
+#fig.append( glucifer.objects.Points(swarm,parallelVariable[0]))
 #fig.show()
+
+
+# In[188]:
+
+
+#parallelMeshVariable = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=2 )
+#parallelStressVariable = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
+
+#lithHalfThick = ndimlz(60.*ur.kilometer)
+#director, fpts = mCollection[0].compute_normals(mesh.data, thickness=lithHalfThick)
+#parDir = np.column_stack((-1.*director[:,1], director[:,0]))
+#parallelVariable.data[fpts] = parDir[fpts]
 
 
 # ## Update functions
@@ -1443,8 +1463,8 @@ def swarm_to_mesh_update():
 # In[139]:
 
 
-sigXXFn = 2.*symStrainrate[0]*viscMesh
-sigXXMesh.data[:] = sigXXFn.evaluate(mesh)
+#sigXXFn = 2.*symStrainrate[0]*viscMesh
+#sigXXMesh.data[:] = sigXXFn.evaluate(mesh)
 
 
 # In[135]:
@@ -1455,12 +1475,12 @@ sigXXMesh.data[:] = sigXXFn.evaluate(mesh)
 swarm_to_mesh_update()
 
 
-# In[138]:
+# In[141]:
 
 
-fig = glucifer.Figure(figsize=(960,300) )
-fig.append( glucifer.objects.Surface(mesh, sigXXFn , onMesh=True))
-fig.show()
+#fig = glucifer.Figure(figsize=(960,300) )
+#fig.append( glucifer.objects.Surface(mesh, sigXXMesh, onMesh=True))
+#fig.show()
 
 
 # In[203]:
@@ -1635,6 +1655,7 @@ while time < tm.times[-1] and step < maxSteps:
     #running fault healing/addition, map back to swarm
     if step % faults_update == 0:
         update_faults()
+        update_markers
     if step % swarm_update == 0:
         update_swarm()
         
