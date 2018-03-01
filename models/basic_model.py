@@ -1655,7 +1655,7 @@ while time < tm.times[-1] and step < maxSteps:
     #running fault healing/addition, map back to swarm
     if step % faults_update == 0:
         update_faults()
-        update_markers
+        update_markers()
     if step % swarm_update == 0:
         update_swarm()
         
