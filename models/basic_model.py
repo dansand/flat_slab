@@ -1108,15 +1108,15 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 # ## Set up a midplane swarm
 
-# In[193]:
+# In[95]:
 
 
 spId = 2
 midPlaneDepth = ndimlz(25.*ur.kilometer)
 
-midPlaneXs = np.arange(tm.get_boundaries(2)[0], tm.get_boundaries(2)[1], ds)
+midPlaneXs = np.arange(tm.get_boundaries(2)[0] + 2.*ds, tm.get_boundaries(2)[1] - 2.*ds, ds)
 midPlaneYs = np.ones(len(midPlaneXs)) * (1. - midPlaneDepth)
-midplane = interface2D(mesh, velocityField, midPlaneXs, midPlaneYs,1.0, 99)
+midplane = interface2D(mesh, velocityField, midPlaneXs, midPlaneYs,1.0, 2)
 
 mCollection = interface_collection([])
 mCollection.append(midplane)
@@ -1130,6 +1130,21 @@ dummy =  midPlaneMasterSwarm.add_particles_with_coordinates(np.column_stack((all
 del allxs
 del allys
 
+
+
+# In[96]:
+
+
+dummy = remove_faults_from_boundaries(tm, mCollection, faultRmfn )
+
+
+# In[98]:
+
+
+#fig = glucifer.Figure(figsize=(960,300) )
+#fig.append( glucifer.objects.Surface(mesh, faultRmfn))
+#fig.append( glucifer.objects.Points( mCollection[0].swarm))
+#fig.show()
 
 
 # ## Update functions
@@ -1237,7 +1252,7 @@ def update_faults():
 # In[195]:
 
 
-markerDetroyDepth = ndimlz(500*ur.kilometer)
+markerDestroyDepth = ndimlz(500*ur.kilometer)
 def update_markers():
         
     #order is very important here
@@ -1249,7 +1264,7 @@ def update_markers():
     for f in mCollection:
         
         #Remove particles below a specified depth
-        depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - markerDetroyDepth)
+        depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - markerDestroyDepth)
         with f.swarm.deform_swarm():
             f.swarm.particleCoordinates.data[depthMask] = (9999999., 9999999.)
         
