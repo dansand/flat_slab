@@ -208,7 +208,7 @@ md.meshRefineFactor = 0.7
 md.nltol = 0.01
 md.druckerAlpha = 1.
 md.penaltyMethod = True
-md.buoyancyFac = 1.5
+md.buoyancyFac = 1.2
 md.viscosityMin = 1e18* u.pascal * u.second
 md.viscosityMax = 1e24* u.pascal * u.second
 #wedge stuff
@@ -324,7 +324,7 @@ if md.refineVert:
 # In[16]:
 
 
-endTime = ndimlz(40*ur.megayear) 
+endTime = ndimlz(45*ur.megayear) 
 refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
@@ -340,7 +340,7 @@ vb12= ndimlz(2.0*ur.centimeter/ur.year )
 
 
 vp2start= ndimlz(6.*ur.centimeter/ur.year )
-vp2end= ndimlz(0.*ur.centimeter/ur.year )
+vp2end= ndimlz(2.*ur.centimeter/ur.year )
 
 
 # In[18]:
@@ -525,7 +525,7 @@ ds = (tm.maxX - tm.minX)/(8.*tm.mesh.elementRes[0])
 
 fCollection = interface_collection([])
 
-deepDepth = ndimlz(300.*ur.kilometer)
+deepDepth = ndimlz(150.*ur.kilometer)
 
 for e in tm.undirected.edges():
     if tm.is_subduction_boundary(e):
