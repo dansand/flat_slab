@@ -705,12 +705,6 @@ for f in fCollection:
 # In[45]:
 
 
-#md.faultThickness, md.wedgeThickness
-
-
-# In[46]:
-
-
 wedgeVariable.data[:] = 0
 def build_wedge_region():
     
@@ -725,18 +719,27 @@ def build_wedge_region():
     wedgeVariable.data[mask] = 0
 
     #And outside of the x lim
-    mask2 = fCollection[0].swarm.particleCoordinates.data[:,1] > (1. - md.wedgeDeep)
-    if mask2.sum():
-        maxXWedge = np.max(fCollection[0].swarm.particleCoordinates.data[:,0][mask2]) + 2*ds
-    else:
-        maxXWedge = mesh.maxCoord[0]
-    mask3 = swarm.particleCoordinates.data[:,0] > maxXWedge
+    #mask2 = fCollection[0].swarm.particleCoordinates.data[:,1] > (1. - md.wedgeDeep)
+    #if mask2.sum():
+    #    maxXWedge = np.max(fCollection[0].swarm.particleCoordinates.data[:,0][mask2]) + 2*ds
+    #else:
+    #    maxXWedge = mesh.maxCoord[0]
+    
+    #md.faultThickness, md.wedgeThickness
+    
+    #this relies on using the max fault depth as the max wedge depth.
+    minmax_coordx = fn.view.min_max(fn.coord()[0])
+    ignore = minmax_coordx.evaluate(fCollection[0].swarm)
+    leftExt = minmax_coordx.min_global()
+    rightExt = minmax_coordx.max_global()
+  
+    mask3 = swarm.particleCoordinates.data[:,0] > rightExt
 
     if mask3.sum():
         wedgeVariable.data[mask3 ] = 0
 
 
-# In[47]:
+# In[46]:
 
 
 #build this guy here so it has contains both 0s and 1s - 
@@ -745,7 +748,7 @@ def build_wedge_region():
 build_wedge_region()
 
 
-# In[48]:
+# In[47]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -756,21 +759,23 @@ build_wedge_region()
 #figProx.show()
 
 
-# In[49]:
+# In[48]:
 
 
-figProx.save_database("test.gldb")
+#figProx.save_database("test.gldb")
 
 
 # ## Prescribed velocity
 
-# In[ ]:
+# In[49]:
 
 
 def set_vel_return_nodes(time, maskFn):
+    
     """
     globals:
     velocityField
+    
     """
     
     nodes = tm.plate_vel_node_fn(time, maskFn = maskFn)
@@ -790,20 +795,20 @@ def set_vel_return_nodes(time, maskFn):
     
 
 
-# In[ ]:
+# In[50]:
 
 
 vXnodes = set_vel_return_nodes(0., velMaskFn)
 
 
-# In[ ]:
+# In[51]:
 
 
 #np.empty(0), 
 #test = tm.mesh.specialSets['MaxJ_VertexSet']data.shape
 
 
-# In[ ]:
+# In[52]:
 
 
 #check
@@ -819,7 +824,7 @@ vXnodes = set_vel_return_nodes(0., velMaskFn)
 
 # ## Project the swarm 'proxy temp' to mesh
 
-# In[ ]:
+# In[53]:
 
 
 projectorMeshTemp= uw.utils.MeshVariable_Projection( temperatureField, proxyTempVariable , type=0 )
@@ -828,7 +833,7 @@ projectorMeshTemp.solve()
 
 # ## Boundary conditions
 
-# In[ ]:
+# In[54]:
 
 
 iWalls = mesh.specialSets["MinI_VertexSet"] + mesh.specialSets["MaxI_VertexSet"]
@@ -842,21 +847,20 @@ bWalls = mesh.specialSets["MinJ_VertexSet"]
 #                                           indexSetsPerDof = (iWalls, jWalls) )
 
 
-# In[ ]:
+# In[55]:
 
 
 #vXnodes
 
 
-# In[ ]:
+# In[56]:
 
 
 def build_velBcs(nodes):
     
     velnodeset = mesh.specialSets["Empty"]
     velnodeset += nodes
-    
-    
+
     
     velBC  = uw.conditions.DirichletCondition( variable        = velocityField, 
                                            indexSetsPerDof = (iWalls + velnodeset, jWalls) )
@@ -864,13 +868,13 @@ def build_velBcs(nodes):
     return velBC
 
 
-# In[ ]:
+# In[57]:
 
 
 velBC = build_velBcs(vXnodes)
 
 
-# In[ ]:
+# In[58]:
 
 
 #Ridges enforced
@@ -884,7 +888,7 @@ temperatureField.data[iWalls.data] = ndp.potentialTemp_
 
 # ## Bouyancy
 
-# In[ ]:
+# In[59]:
 
 
 temperatureFn = temperatureField
@@ -900,7 +904,7 @@ buoyancyMapFn = thermalDensityFn*gravity
 
 # ## Rheology
 
-# In[ ]:
+# In[60]:
 
 
 symStrainrate = fn.tensor.symmetric( 
@@ -917,12 +921,13 @@ def safe_visc(func, viscmin=md.viscosityMin, viscmax=md.viscosityMax):
     return fn.misc.max(viscmin, fn.misc.min(viscmax, func))
 
 
-# In[ ]:
+# In[75]:
 
 
 #Interface rheology extent
 
-subZoneDistfn = tm.subZoneAbsDistFn(upper=True)
+subZoneDistfn = tm.subZoneAbsDistFn(upper=False, bigNum = 0.0)
+#subZoneDistfn = tm.subZoneAbsDistFn(upper=True)
 
 
 faultHorizTaperFn  = cosine_taper(subZoneDistfn, 
@@ -931,16 +936,31 @@ faultDepthTaperFn = cosine_taper(depthFn,
                                  md.faultViscDepthTaperStart, md.faultViscDepthTaperWidth)
 
 
-# In[ ]:
+# In[77]:
+
+
+#fig = glucifer.Figure(figsize=(960,300))
+
+#fig.append( glucifer.objects.Points(swarm, faultRheologyFn,  logScale=True))
+#fig.append( glucifer.objects.Surface(mesh,  faultHorizTaperFn))
+
+#fig.show()
+#fig.save_database('test.gldb')
+
+
+# In[64]:
 
 
 #temperatureField, 
 
-ndp.diffusionPreExp, ndp.diffusionVolumeDepth, ndp.diffusionEnergyDepth, ndp.surfaceTemp
+#ndp.diffusionPreExp, ndp.diffusionVolumeDepth, ndp.diffusionEnergyDepth, ndp.surfaceTemp
 #(1./ndp.diffusionPreExp)
+#md.faultViscHorizTaperWidth*2900.
+
+#5/4.
 
 
-# In[ ]:
+# In[66]:
 
 
 
@@ -978,13 +998,13 @@ faultViscosityFn = ndp.viscosityFault
 faultRheologyFn =  faultViscosityFn*(1. - faultDepthTaperFn) +                         faultDepthTaperFn*mantleRheologyFn + faultHorizTaperFn*mantleRheologyFn
 
 
-# In[ ]:
+# In[67]:
 
 
 #(md.lowerMantleDepth - 0.5*md.lowerMantleTransWidth )*2900.0
 
 
-# In[ ]:
+# In[83]:
 
 
 #Here's how we include the wedge 
@@ -993,7 +1013,7 @@ mantleRheologyFn_ = fn.branching.map( fn_key = wedgeVariable,
                                             1:mantleRheologyFn} )
 
 
-# In[ ]:
+# In[84]:
 
 
 #viscconds = ((proximityVariable == 0, mantleRheologyFn),
@@ -1008,30 +1028,19 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                                         2:faultRheologyFn} )
 
 
-# In[ ]:
+# In[85]:
 
 
 #md.wedgeViscosity
 
 
-# In[ ]:
-
-
-#fig = glucifer.Figure(figsize=(960,300) )
-#fig.append( glucifer.objects.Points(swarm, mantleRheologyFn_,  logScale=True))
-#fig.append( glucifer.objects.Surface(mesh, transitionZoneTaperFn , onMesh=True))
-
-#fig.show()
-#fig.save_database('test.gldb')
-
-
-# In[ ]:
+# In[71]:
 
 
 #fig.save_database('test.gldb')
 
 
-# In[ ]:
+# In[72]:
 
 
 #ndimlz(1.0*ur.megayear)
@@ -1421,7 +1430,8 @@ def update_mask_fns():
 
 
     #the following dictates where the fault rheology will be activated
-    subZoneDistfn = tm.subZoneAbsDistFn(upper=True)
+    #subZoneDistfn = tm.subZoneAbsDistFn(upper=True)
+    subZoneDistfn = tm.subZoneAbsDistFn(upper=False, bigNum = 0.0)
     
     faultHorizTaperFn  = cosine_taper(subZoneDistfn, 
                                   md.faultViscHorizTaperStart, md.faultViscHorizTaperWidth)
