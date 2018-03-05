@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[1]:
+# In[22]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[2]:
+# In[23]:
 
 
 import numpy as np
@@ -30,7 +30,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[3]:
+# In[24]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -46,7 +46,7 @@ except:
     pass
 
 
-# In[4]:
+# In[25]:
 
 
 #load in parent stuff
@@ -57,7 +57,7 @@ except:
 from unsupported_dan.UWsubduction.model import *
 
 
-# In[5]:
+# In[26]:
 
 
 from unsupported_dan.UWsubduction.subduction_utils import *
@@ -69,7 +69,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[6]:
+# In[27]:
 
 
 ############
@@ -131,14 +131,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[7]:
+# In[28]:
 
 
 from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = UnitRegistry
 
 
-# In[8]:
+# In[29]:
 
 
 #pd refers to dimensional paramters
@@ -175,7 +175,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 paramDict_dim = pd
 
 
-# In[9]:
+# In[30]:
 
 
 md = edict({})
@@ -216,11 +216,13 @@ md.wedgeViscosity = 5e19* u.pascal * u.second
 md.wedgeShallow=40*u.km
 md.wedgeDeep=150*u.km
 md.wedgeThickness = 200*u.km
-md.turnOnWedge = 20*u.megayears 
+md.turnOnWedge = 20*u.megayears
+md.turnOffVels = True
+
 modelDict_dim = md
 
 
-# In[10]:
+# In[31]:
 
 
 #import parameters, model settings, unit registry, scaling system, etc
@@ -244,14 +246,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 #md.res = 48
 
 
-# In[11]:
+# In[32]:
 
 
 #1./ndimlz(1.*ur.megapascal)
 1./ndimlz(1.*ur.megayear)
 
 
-# In[12]:
+# In[33]:
 
 
 #delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
@@ -260,14 +262,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[13]:
+# In[34]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
 
 
-# In[14]:
+# In[35]:
 
 
 yres = int(md.res)
@@ -295,7 +297,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[15]:
+# In[36]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -321,7 +323,7 @@ if md.refineVert:
 
 # ## Build plate model
 
-# In[16]:
+# In[37]:
 
 
 endTime = ndimlz(45*ur.megayear) 
@@ -329,7 +331,7 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[17]:
+# In[38]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
@@ -343,43 +345,48 @@ vp2start= ndimlz(6.*ur.centimeter/ur.year )
 vp2end= ndimlz(2.*ur.centimeter/ur.year )
 
 
-# In[18]:
 
-
-#len(tm.times), len(velsP2)
-
-
-# In[19]:
+# In[48]:
 
 
 tm = TectModel(mesh, 0, endTime, plateModelDt)
 
 velsP2 = np.linspace(vp2start, vp2end, len(tm.times))
-
-
 tm.add_plate(1, velocities=vp1)
 #tm.add_plate(2, velocities=vp2start)
 tm.add_plate(2, velocities=velsP2)
 tm.add_plate(3, velocities=vp3)
 
 
-# In[20]:
+if md.turnOffVels:
+    ix_ = np.argmin(np.abs(tm.times - md.turnOnWedge))
+    tm.node[2]['velocities'][ix_:] = np.nan
 
 
-ridgeLoc = -0.7
-subLoc = ridgeLoc  + ndimlz(2000.*ur.kilometer)
-print(ridgeLoc, subLoc)
+# In[50]:
+
+
+#tm.node[2]['velocities']
+
+
+# In[40]:
+
+
+#switch off SP velocity
+#velsFalse_ = np.zeros(len(tm.times))
+#velsFalse_.fill(np.nan)
+#tm.node[2]['velocities'] = velsFalse_
 
 
 # In[21]:
 
 
-tm.add_left_boundary(1, plateInitAge=md.slabAge/3., velocities=False)
-#tm.add_left_boundary(2, plateInitAge=0., velocities=False)
+ridgeLoc = -0.7
+subLoc = ridgeLoc  + ndimlz(2000.*ur.kilometer)
 
+tm.add_left_boundary(1, plateInitAge=md.slabAge/3., velocities=False)
 tm.add_ridge(1,2, ridgeLoc, velocities=vb12)
 tm.add_subzone(2, 3, subLoc, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrench)
-
 tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 
@@ -831,6 +838,12 @@ projectorMeshTemp= uw.utils.MeshVariable_Projection( temperatureField, proxyTemp
 projectorMeshTemp.solve()
 
 
+# In[82]:
+
+
+
+
+
 # ## Boundary conditions
 
 # In[54]:
@@ -884,6 +897,15 @@ dirichTempBC = uw.conditions.DirichletCondition(     variable=temperatureField,
 
 ###If we want thermal ridges fixed
 temperatureField.data[iWalls.data] = ndp.potentialTemp_
+
+
+# In[ ]:
+
+
+## Reassert the tempBCS
+
+temperatureField.data[tWalls.data] = ndp.surfaceTemp_
+temperatureField.data[bWalls.data] = ndp.potentialTemp_
 
 
 # ## Bouyancy
@@ -1191,6 +1213,17 @@ del allys
 #parallelVariable.data[fpts] = parDir[fpts]
 
 
+# In[ ]:
+
+
+#setup a swarm for evaluation surface data on (same points as mesh nodes)
+
+surfacexs = mesh.data[tWalls.data][:,0]
+surfaceys = mesh.data[tWalls.data][:,1]
+surfLine = interface2D(mesh, velocityField,surfacexs, surfaceys , 0,  2) #
+surfVx = uw.swarm.SwarmVariable(surfLine.swarm, 'double', 1)
+
+
 # ## Update functions
 
 # In[62]:
@@ -1357,24 +1390,7 @@ def update_swarm():
 # In[21]:
 
 
-#outputPath = os.path.join(os.path.abspath("."),"output/files")
 
-if uw.rank()==0:
-    if not os.path.exists(outputPath):
-        os.makedirs(outputPath)
-uw.barrier()
-
-
-surfacexs = mesh.data[tWalls.data][:,0]
-surfaceys = mesh.data[tWalls.data][:,1]
-#note that the plate ID needs to be the same as the SP for remove faults from boundaries to work
-surfLine = interface2D(mesh, velocityField,surfacexs, surfaceys , 0,  2) #
-surfVx = uw.swarm.SwarmVariable(surfLine.swarm, 'double', 1)
-
-def save_files(step):
-    surfVx.data[:] = velocityField[0].evaluate(surfLine.swarm)
-    
-    surfVx.save(filePath + "surfVx_" + str(step).zfill(3) + "_.h5")
 
 
 # In[69]:
@@ -1532,6 +1548,9 @@ swarm_to_mesh_update()
 def files_update():
     fCollection[0].swarm.save( filePath + "interface" + str(step).zfill(5))
     mCollection[0].swarm.save( filePath + "midplane" + str(step).zfill(5))
+    
+    surfVx.data[:] = velocityField[0].evaluate(surfLine.swarm)
+    surfVx.save(filePath + "surfVx_" + str(step).zfill(3) + "_.h5")
 
 
 # In[90]:
@@ -1745,7 +1764,9 @@ while time < tm.times[-1] and step < maxSteps:
     
     
     if time > md.turnOnWedge:
-        #first we toggle the rheology. 
+
+        
+        #toggle the rheology. 
         #this should only happen once, hence the wedgeOn var. 
         if wedgeOn == False:
             mantleRheologyFn_ = fn.branching.map( fn_key = wedgeVariable,
