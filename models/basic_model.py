@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[22]:
+# In[1]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[23]:
+# In[2]:
 
 
 import numpy as np
@@ -30,7 +30,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[24]:
+# In[3]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -46,7 +46,7 @@ except:
     pass
 
 
-# In[25]:
+# In[4]:
 
 
 #load in parent stuff
@@ -57,7 +57,7 @@ except:
 from unsupported_dan.UWsubduction.model import *
 
 
-# In[26]:
+# In[5]:
 
 
 from unsupported_dan.UWsubduction.subduction_utils import *
@@ -69,7 +69,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[27]:
+# In[6]:
 
 
 ############
@@ -131,14 +131,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[28]:
+# In[7]:
 
 
 from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = UnitRegistry
 
 
-# In[29]:
+# In[8]:
 
 
 #pd refers to dimensional paramters
@@ -175,7 +175,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 paramDict_dim = pd
 
 
-# In[30]:
+# In[9]:
 
 
 md = edict({})
@@ -222,7 +222,7 @@ md.turnOffVels = True
 modelDict_dim = md
 
 
-# In[31]:
+# In[10]:
 
 
 #import parameters, model settings, unit registry, scaling system, etc
@@ -246,14 +246,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 #md.res = 48
 
 
-# In[32]:
+# In[11]:
 
 
 #1./ndimlz(1.*ur.megapascal)
 1./ndimlz(1.*ur.megayear)
 
 
-# In[33]:
+# In[12]:
 
 
 #delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
@@ -262,14 +262,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[34]:
+# In[13]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
 
 
-# In[35]:
+# In[14]:
 
 
 yres = int(md.res)
@@ -297,7 +297,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[36]:
+# In[15]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -323,7 +323,7 @@ if md.refineVert:
 
 # ## Build plate model
 
-# In[37]:
+# In[16]:
 
 
 endTime = ndimlz(45*ur.megayear) 
@@ -331,7 +331,7 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[38]:
+# In[17]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
@@ -346,7 +346,7 @@ vp2end= ndimlz(2.*ur.centimeter/ur.year )
 
 
 
-# In[48]:
+# In[18]:
 
 
 tm = TectModel(mesh, 0, endTime, plateModelDt)
@@ -363,13 +363,13 @@ if md.turnOffVels:
     tm.node[2]['velocities'][ix_:] = np.nan
 
 
-# In[50]:
+# In[19]:
 
 
 #tm.node[2]['velocities']
 
 
-# In[40]:
+# In[20]:
 
 
 #switch off SP velocity
@@ -838,12 +838,6 @@ projectorMeshTemp= uw.utils.MeshVariable_Projection( temperatureField, proxyTemp
 projectorMeshTemp.solve()
 
 
-# In[82]:
-
-
-
-
-
 # ## Boundary conditions
 
 # In[54]:
@@ -899,7 +893,7 @@ dirichTempBC = uw.conditions.DirichletCondition(     variable=temperatureField,
 temperatureField.data[iWalls.data] = ndp.potentialTemp_
 
 
-# In[ ]:
+# In[59]:
 
 
 ## Reassert the tempBCS
@@ -910,7 +904,7 @@ temperatureField.data[bWalls.data] = ndp.potentialTemp_
 
 # ## Bouyancy
 
-# In[59]:
+# In[60]:
 
 
 temperatureFn = temperatureField
@@ -926,7 +920,7 @@ buoyancyMapFn = thermalDensityFn*gravity
 
 # ## Rheology
 
-# In[60]:
+# In[61]:
 
 
 symStrainrate = fn.tensor.symmetric( 
@@ -943,7 +937,7 @@ def safe_visc(func, viscmin=md.viscosityMin, viscmax=md.viscosityMax):
     return fn.misc.max(viscmin, fn.misc.min(viscmax, func))
 
 
-# In[75]:
+# In[62]:
 
 
 #Interface rheology extent
@@ -958,7 +952,7 @@ faultDepthTaperFn = cosine_taper(depthFn,
                                  md.faultViscDepthTaperStart, md.faultViscDepthTaperWidth)
 
 
-# In[77]:
+# In[63]:
 
 
 #fig = glucifer.Figure(figsize=(960,300))
@@ -982,7 +976,7 @@ faultDepthTaperFn = cosine_taper(depthFn,
 #5/4.
 
 
-# In[66]:
+# In[65]:
 
 
 
@@ -1020,13 +1014,13 @@ faultViscosityFn = ndp.viscosityFault
 faultRheologyFn =  faultViscosityFn*(1. - faultDepthTaperFn) +                         faultDepthTaperFn*mantleRheologyFn + faultHorizTaperFn*mantleRheologyFn
 
 
-# In[67]:
+# In[66]:
 
 
 #(md.lowerMantleDepth - 0.5*md.lowerMantleTransWidth )*2900.0
 
 
-# In[83]:
+# In[67]:
 
 
 #Here's how we include the wedge 
@@ -1035,7 +1029,7 @@ mantleRheologyFn_ = fn.branching.map( fn_key = wedgeVariable,
                                             1:mantleRheologyFn} )
 
 
-# In[84]:
+# In[68]:
 
 
 #viscconds = ((proximityVariable == 0, mantleRheologyFn),
@@ -1050,19 +1044,19 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                                         2:faultRheologyFn} )
 
 
-# In[85]:
+# In[69]:
 
 
 #md.wedgeViscosity
 
 
-# In[71]:
+# In[70]:
 
 
 #fig.save_database('test.gldb')
 
 
-# In[72]:
+# In[71]:
 
 
 #ndimlz(1.0*ur.megayear)
@@ -1070,7 +1064,7 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
 
 # ## Stokes
 
-# In[125]:
+# In[72]:
 
 
 surfaceArea = uw.utils.Integral(fn=1.0,mesh=mesh, integrationType='surface', surfaceIndexSet=tWalls)
@@ -1097,7 +1091,7 @@ def pressure_calibrate():
     smooth_pressure(mesh)
 
 
-# In[126]:
+# In[73]:
 
 
 stokes = uw.systems.Stokes( velocityField  = velocityField, 
@@ -1107,7 +1101,7 @@ stokes = uw.systems.Stokes( velocityField  = velocityField,
                                    fn_bodyforce   = buoyancyMapFn )
 
 
-# In[127]:
+# In[74]:
 
 
 solver = uw.systems.Solver(stokes)
@@ -1118,14 +1112,14 @@ solver.set_penalty(1.0e7)
 solver.options.scr.ksp_rtol = 1.0e-4
 
 
-# In[128]:
+# In[75]:
 
 
 solver.solve(nonLinearIterate=True, nonLinearTolerance=md.nltol, callback_post_solve = pressure_calibrate)
 solver.print_stats()
 
 
-# In[64]:
+# In[76]:
 
 
 #velocityField.data.max()
@@ -1213,7 +1207,7 @@ del allys
 #parallelVariable.data[fpts] = parDir[fpts]
 
 
-# In[ ]:
+# In[119]:
 
 
 #setup a swarm for evaluation surface data on (same points as mesh nodes)
@@ -1222,6 +1216,70 @@ surfacexs = mesh.data[tWalls.data][:,0]
 surfaceys = mesh.data[tWalls.data][:,1]
 surfLine = interface2D(mesh, velocityField,surfacexs, surfaceys , 0,  2) #
 surfVx = uw.swarm.SwarmVariable(surfLine.swarm, 'double', 1)
+surfGravStress = uw.swarm.SwarmVariable(surfLine.swarm, 'double', 1)
+surfGravTemp = uw.swarm.SwarmVariable(surfLine.swarm, 'double', 1)
+
+surfVx.data[:] = 0
+surfGravStress.data[:] = 0
+surfGravTemp.data[:] = 0
+
+
+# ## Gravity function
+# 
+# ```
+# #dimensionalisation as follows
+# G = 6.67e-11         #grav. constant
+# outerFac = 2.*np.pi*G*1e5 
+# tempFac = (pd.refDensity*pd.refExpansivity*pd.refLength*(pd.potentialTemp - pd.surfaceTemp)).to_base_units()
+# stressFac = ((pd.refDiffusivity*pd.refViscosity)/(pd.refGravity*pd.refLength**2)).to_base_units()
+# ```
+
+# In[104]:
+
+
+## Surface stress
+devStressFn =  2.*stokes.fn_viscosity*fn.tensor.symmetric( velocityField.fn_gradient ) #- pressureField
+devStressField = uw.mesh.MeshVariable( mesh=mesh, nodeDofCount=3 )
+projectorDevStress = uw.utils.MeshVariable_Projection( devStressField, devStressFn , type=0 )
+projectorDevStress.solve()
+
+
+meshPressure = uw.mesh.MeshVariable( mesh, 1 )
+projectorPressure = uw.utils.MeshVariable_Projection( meshPressure, pressureField, type=0 )
+projectorPressure.solve()
+
+#total stress
+totalStressFn = -1.*(devStressField[1] - meshPressure)
+
+
+# In[124]:
+
+
+from spectral_tools import *
+
+nk = 8
+ks = integral_wavenumbers(mesh, nk, axisIndex=1)
+upContKernelFn = fn.math.exp(-1.*(1. - fn.coord()[1])*ks)
+
+def update_gravity():
+    
+    #surface dynamic topography component
+    projectorDevStress.solve()
+    projectorPressure.solve()
+    totalStressFn = -1.*(devStressField[1] - meshPressure)
+    surfGravStress.data[:] = totalStressFn.evaluate(tWalls)
+    
+    
+    synthFn = spectral_integral(mesh, temperatureField, N=nk, axisIndex=1, kernelFn=upContKernelFn, 
+                                    average = True, integrationType="volume",surfaceIndexSet=None )
+    
+    surfGravTemp.data[:] = synthFn.evaluate(tWalls)
+
+
+# In[125]:
+
+
+#update_gravity()
 
 
 # ## Update functions
@@ -1551,6 +1609,9 @@ def files_update():
     
     surfVx.data[:] = velocityField[0].evaluate(surfLine.swarm)
     surfVx.save(filePath + "surfVx_" + str(step).zfill(3) + "_.h5")
+    
+    surfGravStress.save(filePath + "gravStress_" + str(step).zfill(3) + "_.h5")
+    surfGravTemp.save(filePath + "gravTemp_" + str(step).zfill(3) + "_.h5")
 
 
 # In[90]:
@@ -1751,9 +1812,9 @@ while time < tm.times[-1] and step < maxSteps:
         figMask.save(    outputPath + "mask"    + str(step).zfill(4))
         #figVel.save(    outputPath + "vel"    + str(step).zfill(4))
         
-        #save out the surface velocity
-        #save_files(step)
+        #save out the files
         
+        update_gravity()
         files_update()
         
         #XDMFS
