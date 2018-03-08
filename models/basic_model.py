@@ -180,8 +180,8 @@ paramDict_dim = pd
 
 md = edict({})
 #Model geometry, and misc Lengths used to control behaviour
-md.depth=1000*u.km                                                #Model Depth
-md.aspectRatio=5.
+md.depth=800*u.km                                                #Model Depth
+md.aspectRatio=5.2
 #lengths, factors relating to subduction fault behaviour
 md.faultViscDepthTaperStart = 100*u.km
 md.faultViscDepthTaperWidth = 20*u.km
@@ -321,41 +321,53 @@ if md.refineVert:
         mesh.data[:,1] = mesh.data[:,1] + 1.0
 
 
-# ## Build plate model
-
 # In[16]:
 
 
-endTime = ndimlz(45*ur.megayear) 
-refVel = ndimlz(2*ur.cm/ur.year)
-plateModelDt = ndimlz(0.1*ur.megayear)
+mesh.minCoord[0], mesh.maxCoord[0]
 
+
+# ## Build plate model
 
 # In[17]:
 
 
-#velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
-vp1= ndimlz(0.*ur.centimeter/ur.year )
-vp3= ndimlz(-2.*ur.centimeter/ur.year )
-
-vb12= ndimlz(2.0*ur.centimeter/ur.year )
-
-
-vp2start= ndimlz(6.*ur.centimeter/ur.year )
-vp2end= ndimlz(2.*ur.centimeter/ur.year )
-
+endTime = ndimlz(50*ur.megayear) 
+refVel = ndimlz(2*ur.cm/ur.year)
+plateModelDt = ndimlz(0.1*ur.megayear)
 
 
 # In[18]:
 
 
+#velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
+vp1= ndimlz(0.*ur.centimeter/ur.year )
+
+vp3start= ndimlz(-3.*ur.centimeter/ur.year )
+vp3end= ndimlz(-1.5*ur.centimeter/ur.year )
+
+vb12= ndimlz(1.5*ur.centimeter/ur.year )
+
+
+vp2start= ndimlz(5.*ur.centimeter/ur.year )
+vp2end= ndimlz(2.*ur.centimeter/ur.year )
+
+
+
+# In[20]:
+
+
 tm = TectModel(mesh, 0, endTime, plateModelDt)
 
 velsP2 = np.linspace(vp2start, vp2end, len(tm.times))
+velsP3 = np.linspace(vp3start, vp3end, len(tm.times))
+
+
+
 tm.add_plate(1, velocities=vp1)
 #tm.add_plate(2, velocities=vp2start)
 tm.add_plate(2, velocities=velsP2)
-tm.add_plate(3, velocities=vp3)
+tm.add_plate(3, velocities=velsP3)
 
 
 if md.turnOffVels:
@@ -363,13 +375,13 @@ if md.turnOffVels:
     tm.node[2]['velocities'][ix_:] = np.nan
 
 
-# In[19]:
+# In[21]:
 
 
 #tm.node[2]['velocities']
 
 
-# In[20]:
+# In[22]:
 
 
 #switch off SP velocity
@@ -378,7 +390,7 @@ if md.turnOffVels:
 #tm.node[2]['velocities'] = velsFalse_
 
 
-# In[21]:
+# In[23]:
 
 
 ridgeLoc = -0.7
@@ -390,7 +402,7 @@ tm.add_subzone(2, 3, subLoc, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrenc
 tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 
-# In[22]:
+# In[24]:
 
 
 #((1400*ur.kilometer)/(35*ur.megayear)).to(ur.cm/ ur.year )
@@ -1224,15 +1236,20 @@ surfGravStress.data[:] = 0
 surfGravTemp.data[:] = 0
 
 
-# ## Gravity function
-# 
-# ```
-# #dimensionalisation as follows
-# G = 6.67e-11         #grav. constant
-# outerFac = 2.*np.pi*G*1e5 
-# tempFac = (pd.refDensity*pd.refExpansivity*pd.refLength*(pd.potentialTemp - pd.surfaceTemp)).to_base_units()
-# stressFac = ((pd.refDiffusivity*pd.refViscosity)/(pd.refGravity*pd.refLength**2)).to_base_units()
-# ```
+# In[148]:
+
+
+## Gravity function
+
+#```
+#dimensionalisation as follows
+G = 6.67e-11         #grav. constant
+gravFac = 2.*np.pi*G*1e5 
+tempFac = (pd.refDensity*pd.refExpansivity*pd.refLength*(pd.potentialTemp - pd.surfaceTemp)).to_base_units()
+stressFac = ((pd.refDiffusivity*pd.refViscosity)/(pd.refGravity*pd.refLength**2)).to_base_units()
+#```
+gravFac, tempFac, stressFac 
+
 
 # In[104]:
 
@@ -1252,7 +1269,7 @@ projectorPressure.solve()
 totalStressFn = -1.*(devStressField[1] - meshPressure)
 
 
-# In[124]:
+# In[129]:
 
 
 from spectral_tools import *
@@ -1267,16 +1284,16 @@ def update_gravity():
     projectorDevStress.solve()
     projectorPressure.solve()
     totalStressFn = -1.*(devStressField[1] - meshPressure)
-    surfGravStress.data[:] = totalStressFn.evaluate(tWalls)
+    surfGravStress.data[:] = totalStressFn.evaluate(surfLine.swarm)
     
     
     synthFn = spectral_integral(mesh, temperatureField, N=nk, axisIndex=1, kernelFn=upContKernelFn, 
                                     average = True, integrationType="volume",surfaceIndexSet=None )
     
-    surfGravTemp.data[:] = synthFn.evaluate(tWalls)
+    surfGravTemp.data[:] = synthFn.evaluate(surfLine.swarm)
 
 
-# In[125]:
+# In[130]:
 
 
 #update_gravity()
