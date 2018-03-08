@@ -160,7 +160,7 @@ pd.potentialTemp_ = pd.potentialTemp - pd.surfaceTemp
 pd.surfaceTemp_ = pd.surfaceTemp - pd.surfaceTemp
 #main rheology parameters
 pd.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
-pd.frictionMantle = u.Quantity(0.2)                                           #mantle friction coefficient in Byerlee law (tan(phi))
+pd.frictionMantle = u.Quantity(0.1)                                           #mantle friction coefficient in Byerlee law (tan(phi))
 pd.frictionMantleDepth = pd.frictionMantle*pd.refDensity*pd.refGravity
 pd.diffusionPreExp = 5.34e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
 pd.diffusionEnergy = 3e5*u.joule/(u.mol)
@@ -180,11 +180,11 @@ paramDict_dim = pd
 
 md = edict({})
 #Model geometry, and misc Lengths used to control behaviour
-md.depth=800*u.km                                                #Model Depth
-md.aspectRatio=5.2
+md.depth=1000*u.km                                                #Model Depth
+md.aspectRatio=5.0
 #lengths, factors relating to subduction fault behaviour
-md.faultViscDepthTaperStart = 100*u.km
-md.faultViscDepthTaperWidth = 20*u.km
+md.faultViscDepthTaperStart = 80*u.km
+md.faultViscDepthTaperWidth = 30*u.km
 md.faultViscHorizTaperStart = 150*u.km
 md.faultViscHorizTaperWidth = 150*u.km
 md.faultThickness = 10.*u.km
@@ -196,8 +196,8 @@ md.lowerMantleTransWidth=100.*u.km
 md.subZoneLoc=-100*u.km                                           #X position of subduction zone...km
 md.slabInitMaxDepth=150*u.km
 md.radiusOfCurv = 200.*u.km                                        #radius of curvature
-md.slabAge=20.*u.megayears                                      #age of subduction plate at trench
-md.opAgeAtTrench=10.*u.megayears                                        #age of op
+md.slabAge=15.*u.megayears                                      #age of subduction plate at trench
+md.opAgeAtTrench=5.*u.megayears                                        #age of op
 #numerical and computation params
 md.res=48
 md.ppc=25                                                         #particles per cell
@@ -212,12 +212,12 @@ md.buoyancyFac = 1.2
 md.viscosityMin = 1e18* u.pascal * u.second
 md.viscosityMax = 1e24* u.pascal * u.second
 #wedge stuff
-md.wedgeViscosity = 5e19* u.pascal * u.second
-md.wedgeShallow=40*u.km
+md.wedgeViscosity = 2e20* u.pascal * u.second
+md.wedgeShallow=30*u.km
 md.wedgeDeep=150*u.km
 md.wedgeThickness = 200*u.km
 md.turnOnWedge = 20*u.megayears
-md.turnOffVels = True
+md.turnOffVels = False
 
 modelDict_dim = md
 
