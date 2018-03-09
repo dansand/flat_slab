@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[18]:
+# In[3]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[19]:
+# In[4]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -33,7 +33,7 @@ except:
     pass
 
 
-# In[20]:
+# In[5]:
 
 
 import os
@@ -49,7 +49,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[21]:
+# In[6]:
 
 
 import UWsubduction as usub
@@ -57,7 +57,7 @@ import UWsubduction.params as params
 import UWsubduction.utils as utils
 
 
-# In[22]:
+# In[7]:
 
 
 #load in parent stuff
@@ -67,13 +67,13 @@ import UWsubduction.utils as utils
 #from unsupported_dan.UWsubduction.model import *
 
 
-# In[23]:
+# In[8]:
 
 
 #TectModel
 
 
-# In[24]:
+# In[9]:
 
 
 from unsupported_dan.utilities.interpolation import nn_evaluation
@@ -81,7 +81,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[25]:
+# In[10]:
 
 
 ############
@@ -143,14 +143,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[26]:
+# In[12]:
 
 
 #from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = params.UnitRegistry
 
 
-# In[27]:
+# In[13]:
 
 
 #pd refers to dimensional paramters
@@ -186,7 +186,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 
 
 
-# In[28]:
+# In[14]:
 
 
 md = edict({})
@@ -219,7 +219,7 @@ md.meshRefineFactor = 0.7
 md.nltol = 0.01
 md.druckerAlpha = 1.
 md.penaltyMethod = True
-md.buoyancyFac = 1.2
+md.buoyancyFac = 1.0
 md.viscosityMin = 1e18* u.pascal * u.second
 md.viscosityMax = 1e24* u.pascal * u.second
 #wedge stuff
@@ -232,7 +232,7 @@ md.turnOffVels = False
 
 
 
-# In[29]:
+# In[15]:
 
 
 #first check for commandLineArgs:
@@ -246,11 +246,10 @@ utils.easy_args(sysArgs, md)
 modelDict_dim = md
 paramDict_dim = pd
 
+#print(md.depth, md.turnOffVels, type(md.turnOffVels),pd.viscosityFault
 
-print(modelDict_dim.depth)
 
-
-# In[30]:
+# In[16]:
 
 
 
@@ -270,14 +269,18 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 #md.res = 48
 
 
-# In[31]:
+#print(md.depth, md.turnOffVels, type(md.turnOffVels),pd.viscosityFault)
+print( type(md.turnOffVels))
+
+
+# In[17]:
 
 
 #1./ndimlz(1.*ur.megapascal)
 1./ndimlz(1.*ur.megayear)
 
 
-# In[32]:
+# In[18]:
 
 
 #delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
@@ -351,12 +354,19 @@ if md.refineVert:
 mesh.minCoord[0], mesh.maxCoord[0]
 
 
+# In[21]:
+
+
+test = 1000*ur.kilometer/ (5*ur.cm/ur.year)
+test.to(ur.megayear)
+
+
 # ## Build plate model
 
 # In[37]:
 
 
-endTime = ndimlz(50*ur.megayear) 
+endTime = ndimlz(35*ur.megayear) 
 refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
@@ -903,11 +913,11 @@ velBC = build_velBcs(vXnodes)
 
 #Ridges enforced
 dirichTempBC = uw.conditions.DirichletCondition(     variable=temperatureField, 
-                                              indexSetsPerDof=(tWalls + iWalls,) )
+                                              indexSetsPerDof=(tWalls + rWalls,) )
 
 
 ###If we want thermal ridges fixed
-temperatureField.data[iWalls.data] = ndp.potentialTemp_
+temperatureField.data[rWalls.data] = ndp.potentialTemp_
 
 
 # In[189]:
@@ -1739,6 +1749,8 @@ figMask = glucifer.Figure( store3, figsize=(960,300) )
 figMask.append( glucifer.objects.Surface(mesh,  maskFnVar1) )
 figMask.append( glucifer.objects.Surface(mesh,  maskFnVar2) )
 figMask.append( glucifer.objects.Surface(mesh, maskFnVar3 , valueRange=[0,3]) )
+for f in fCollection:
+    figMask.append( glucifer.objects.Points(f.swarm, pointSize=5))
 
 
 #figMask.append( glucifer.objects.Surface(mesh,  maskFnVar3) )

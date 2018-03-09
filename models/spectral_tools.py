@@ -8,7 +8,7 @@ def spectral_integral(mesh, fnToInt, N, axisIndex=0, kernelFn=1., average = True
     """
     Returns a function that represents the spectral integral over one of the UW mesh axes. 
     The axis over which the integration is performed is parallel to the provided axisIndex.
-    (the sin cosine modes are created orthogonal the axisIndex).
+    (the sin & cosine modes are created orthogonal the axisIndex).
     
     Parameters
     ----------
@@ -33,6 +33,12 @@ def spectral_integral(mesh, fnToInt, N, axisIndex=0, kernelFn=1., average = True
         If True, return a list of coefficient a_k, b_k in addition to the reconstructed function
    
     
+    Notes
+    ----------
+    In the fourier synthesis, a factor of 2./W needs to be applied to all modes > 0. W is the total width of the spatial domain
+    (the axis over which Fourier coeffients were generated). A factor of 1./W needs to be applied to the average/DC component. 
+    For more details on these normalizations see http://mathworld.wolfram.com/FourierSeries.html
+    
     """
     
     if integrationType:
@@ -52,20 +58,13 @@ def spectral_integral(mesh, fnToInt, N, axisIndex=0, kernelFn=1., average = True
     else:
         raise ValueError( "axisIndex must either of 0 or 1")
     
-    #determine average, and edge cases 
-    if average:
-        average_ = uw.utils.Integral(fnToInt*kernelFn,mesh)
-    else:
-        average_ = uw.utils.Integral(fn.misc.constant(0.), mesh)
-    
     if N <=2:
         raise ValueError( "N must be at least 2, otherwise you should use an integral (N=1)")
-
         
-    
     # create set of wavenumbers / modes
     res = mesh.elementRes[modeaxes]
     width = abs(mesh.maxCoord[modeaxes] - mesh.minCoord[modeaxes])
+    height = abs(mesh.maxCoord[axisIndex] - mesh.minCoord[axisIndex])
     ax_ = fn.coord()[modeaxes]
     modes = []
     #ks = []
@@ -78,8 +77,11 @@ def spectral_integral(mesh, fnToInt, N, axisIndex=0, kernelFn=1., average = True
     cosfns = fn.math.cos(modes)
     
     
+    
     if average:
-        average_ = uw.utils.Integral(fnToInt*kernelFn,mesh)
+        #average_ = uw.utils.Integral((2./width)*fnToInt,mesh)
+        average_ = uw.utils.Integral(fnToInt,mesh)
+
     else:
         average_ = fn.misc.constant(0.)
     
@@ -97,7 +99,7 @@ def spectral_integral(mesh, fnToInt, N, axisIndex=0, kernelFn=1., average = True
 
     synthFn = (2./width)*fn.math.dot(sin_coeffs.evaluate(),sinfns) + \
               (2./width)*fn.math.dot(cos_coeffs.evaluate(),cosfns) + \
-                         average_.evaluate()[0]
+                         (1./width)*average_.evaluate()[0]
     
     if not returnCoeffs:
         return synthFn
