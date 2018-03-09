@@ -1768,11 +1768,11 @@ figMask.append( glucifer.objects.Surface(mesh, maskFnVar3 , valueRange=[0,3]) )
 time = 0.  # Initial time
 step = 0 
 maxSteps = 2000      # Maximum timesteps 
-steps_output = 2   # output every N timesteps
-swarm_update = 2   # output every N timesteps
-faults_update = 2
+steps_output = 20   # output every N timesteps
+swarm_update = 10   # output every N timesteps
+faults_update = 10
 dt_model = 0.
-steps_update_model = 2
+steps_update_model = 5
 
 wedgeOn = False
 update_values()
