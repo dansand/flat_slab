@@ -194,7 +194,7 @@ md = edict({})
 md.depth=1000*u.km                                                #Model Depth
 md.aspectRatio=5.0
 #lengths, factors relating to subduction fault behaviour
-md.faultViscDepthTaperStart = 80*u.km
+md.faultViscDepthTaperStart = 100*u.km
 md.faultViscDepthTaperWidth = 30*u.km
 md.faultViscHorizTaperStart = 150*u.km
 md.faultViscHorizTaperWidth = 150*u.km
@@ -207,8 +207,8 @@ md.lowerMantleTransWidth=100.*u.km
 md.subZoneLoc=-100*u.km                                           #X position of subduction zone...km
 md.slabInitMaxDepth=150*u.km
 md.radiusOfCurv = 200.*u.km                                        #radius of curvature
-md.slabAge=15.*u.megayears                                      #age of subduction plate at trench
-md.opAgeAtTrench=5.*u.megayears                                        #age of op
+md.slabAge=20.*u.megayears                                      #age of subduction plate at trench
+md.opAgeAtTrench=15.*u.megayears                                        #age of op
 #numerical and computation params
 md.res=48
 md.ppc=25                                                         #particles per cell
@@ -224,7 +224,7 @@ md.viscosityMin = 1e18* u.pascal * u.second
 md.viscosityMax = 1e24* u.pascal * u.second
 #wedge stuff
 md.wedgeViscosity = 2e20* u.pascal * u.second
-md.wedgeShallow=30*u.km
+md.wedgeShallow=45*u.km
 md.wedgeDeep=150*u.km
 md.wedgeThickness = 200*u.km
 md.turnOnWedge = 20*u.megayears
@@ -418,7 +418,7 @@ if md.turnOffVels:
 
 
 ridgeLoc = -0.7
-subLoc = ridgeLoc  + ndimlz(2000.*ur.kilometer)
+subLoc = ridgeLoc  + ndimlz(2100.*ur.kilometer)
 
 tm.add_left_boundary(1, plateInitAge=md.slabAge/3., velocities=False)
 tm.add_ridge(1,2, ridgeLoc, velocities=vb12)
@@ -1434,7 +1434,7 @@ markerDestroyDepth = ndimlz(500*ur.kilometer)
 def update_markers():
         
     #order is very important here
-    dummy = usub.remove_fault_drift(mCollection, 1. - midPlaneDepth)
+    #dummy = usub.remove_fault_drift(mCollection, 1. - midPlaneDepth)
     dummy = usub.pop_or_perish(tm, mCollection, midPlaneMasterSwarm, faultAddFn , ds)
     dummy = usub.remove_faults_from_boundaries(tm, mCollection, faultRmfn )
     
@@ -1745,19 +1745,6 @@ figMask.append( glucifer.objects.Surface(mesh, maskFnVar3 , valueRange=[0,3]) )
 #for f in fCollection:
 #    figVel.append( glucifer.objects.Points(f.swarm, pointSize=5))
 
-
-
-# In[245]:
-
-
-#figVisc.show()
-#figVisc.save_database('test.gldb')
-
-
-# In[246]:
-
-
-#1e-2*2900.
 
 
 # ## Main Loop
