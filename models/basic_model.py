@@ -378,12 +378,12 @@ plateModelDt = ndimlz(0.1*ur.megayear)
 vp1= ndimlz(0.*ur.centimeter/ur.year )
 
 vp3start= ndimlz(-3.*ur.centimeter/ur.year )
-vp3end= ndimlz(-1.5*ur.centimeter/ur.year )
+vp3end= ndimlz(-1.0*ur.centimeter/ur.year )
 
 vb12= ndimlz(1.5*ur.centimeter/ur.year )
 
 
-vp2start= ndimlz(5.*ur.centimeter/ur.year )
+vp2start= ndimlz(8.*ur.centimeter/ur.year )
 vp2end= ndimlz(2.*ur.centimeter/ur.year )
 
 
@@ -1192,7 +1192,7 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 # ## Set up a midplane swarm
 
-# In[82]:
+# In[180]:
 
 
 #midplane.swarm.particleCoordinates.data
@@ -1202,7 +1202,7 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 
 spId = 2
-midPlaneDepth = ndimlz(25.*ur.kilometer)
+midPlaneDepth = ndimlz(25.*ur.kilometer + 0.5*(modelDict_dim.faultThickness))
 
 midPlaneXs = np.arange(tm.get_boundaries(2)[0] + 2.*ds, tm.get_boundaries(2)[1] - 2.*ds, ds)
 midPlaneYs = np.ones(len(midPlaneXs)) * (1. - midPlaneDepth)
@@ -1245,15 +1245,6 @@ surfGravTemp = uw.swarm.SwarmVariable(surfLine.swarm, 'double', 1)
 surfVx.data[:] = 0
 surfGravStress.data[:] = 0
 surfGravTemp.data[:] = 0
-
-
-# ## Sigma_ss
-
-# In[ ]:
-
-
-
-    
 
 
 # ## Gravity
@@ -1650,7 +1641,7 @@ swarm_to_mesh_update()
 parallelMeshVariable = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=2 )
 sigSSMesh = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
 
-lithHalfThick = ndimlz(60.*ur.kilometer)
+lithHalfThick = ndimlz(25.*ur.kilometer)
 
 
 def update_slab_parallel_sr():
@@ -1672,14 +1663,21 @@ def update_slab_parallel_sr():
     #resolve the strain rate
     traction =  np.matmul(fullStrainRate,parallelMeshVariable.data[..., np.newaxis])[:,:,0]
     resolvedSR = np.einsum('ij,ij->i', traction , parallelMeshVariable.data)
-    print(resolvedSR.shape)
+    #print(resolvedSR.shape)
+    
     sigSSMesh.data[:,0] = 2.*resolvedSR*viscMesh.data[:,0]
+    #mask values above the maxYieldStress
+    mask = np.abs(sigSSMesh.data[:,0] ) > ndp.yieldStressMax
+    sigSSMesh.data[:,0][mask] = ndp.yieldStressMax
 
 
-# In[159]:
+# In[175]:
 
 
 #update_slab_parallel_sr()
+#mask = np.abs(sigSSMesh.data[:,0] ) > ndp.yieldStressMax
+#sigSSMesh.data[:,0][mask] = ndp.yieldStressMax
+#params.stressScale
 
 
 # In[240]:
@@ -1709,14 +1707,16 @@ def xdmfs_update():
     #part1
     mh = _mH
     tH = temperatureFn.save(xdmfPath + "temp_" + str(step) + ".h5")
+    pH = pressureField.save(xdmfPath + "press_" + str(step) + ".h5")
     visc = viscMesh.save(xdmfPath + "visc_" + str(step) + ".h5")
     sigXX = sigXXMesh.save(xdmfPath + "sigXX_" + str(step) + ".h5")
     sigSS = sigSSMesh.save(xdmfPath + "sigSS_" + str(step) + ".h5")
     
     #part 2
     temperatureFn.xdmf(xdmfPath + "temp_" + str(step), tH, 'temperature', mh, 'mesh', modeltime=time)
+    pressureField.xdmf(xdmfPath + "press_" + str(step), pH, 'pressure', mh, 'mesh', modeltime=time)
     sigXXMesh.xdmf(xdmfPath+ "sigXX_" + str(step), sigXX, 'sigXX', mh, 'mesh', modeltime=time)
-    sigSSMesh.xdmf(xdmfPath+ "sigSS_" + str(step), sigSS, 'sigXX', mh, 'mesh', modeltime=time)
+    sigSSMesh.xdmf(xdmfPath+ "sigSS_" + str(step), sigSS, 'sigSS', mh, 'mesh', modeltime=time)
     viscMesh.xdmf(xdmfPath+ "visc_" + str(step), visc , 'visc', mh, 'mesh', modeltime=time)
 
 
@@ -1934,6 +1934,12 @@ while time < tm.times[-1] and step < maxSteps:
 
 
 #stokes.fn_viscosity = viscosityMapFn
+
+
+# In[163]:
+
+
+
 
 
 # In[88]:
