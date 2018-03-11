@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# # Mexican Flat Slab model
+# ## Mexican Flat Slab model
 # 
 # * Mor-Sz dist at 40 Ma, ~2000 km
 # * Mor-Sz dist at 0 Ma, ~600 km
@@ -210,7 +210,7 @@ md.radiusOfCurv = 200.*u.km                                        #radius of cu
 md.slabAge=20.*u.megayears                                      #age of subduction plate at trench
 md.opAgeAtTrench=15.*u.megayears                                        #age of op
 #numerical and computation params
-md.res=24
+md.res=128
 md.ppc=25                                                         #particles per cell
 md.elementType="Q1/dQ0"
 md.refineHoriz = True
@@ -289,14 +289,15 @@ print( type(md.turnOffVels))
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[16]:
+# In[17]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
 #md.res = 64
+#yres, xres, halfWidth, md.elementType, md.depth
 
 
-# In[17]:
+# In[18]:
 
 
 yres = int(md.res)
@@ -324,7 +325,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[18]:
+# In[19]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -348,13 +349,13 @@ if md.refineVert:
         mesh.data[:,1] = mesh.data[:,1] + 1.0
 
 
-# In[19]:
+# In[20]:
 
 
 mesh.minCoord[0], mesh.maxCoord[0]
 
 
-# In[20]:
+# In[ ]:
 
 
 test = 1000*ur.kilometer/ (5*ur.cm/ur.year)
@@ -1287,7 +1288,7 @@ totalStressFn = -1.*(devStressField[1] - meshPressure)
 
 from spectral_tools import *
 
-nk = 8
+nk = 12
 ks = integral_wavenumbers(mesh, nk, axisIndex=1)
 upContKernelFn = fn.math.exp(-1.*(1. - fn.coord()[1])*ks)
 
@@ -1643,6 +1644,7 @@ sigSSMesh = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
 
 lithHalfThick = ndimlz(25.*ur.kilometer)
 
+fullStrainRate = np.zeros((mesh.data.shape[0], 2,2))
 
 def update_slab_parallel_sr():
     
@@ -1654,7 +1656,6 @@ def update_slab_parallel_sr():
     
     #compute the 2X2 strain rate structure
     strainRateData =  symStrainrate.evaluate(mesh)
-    fullStrainRate = np.zeros((mesh.data.shape[0], 2,2))
     fullStrainRate[:,0,0] = strainRateData[:,0]
     fullStrainRate[:,1,1] = strainRateData[:,1]
     fullStrainRate[:,0,1] = strainRateData[:,2]
@@ -1667,8 +1668,13 @@ def update_slab_parallel_sr():
     
     sigSSMesh.data[:,0] = 2.*resolvedSR*viscMesh.data[:,0]
     #mask values above the maxYieldStress
-    mask = np.abs(sigSSMesh.data[:,0] ) > ndp.yieldStressMax
-    sigSSMesh.data[:,0][mask] = ndp.yieldStressMax
+    #ymask = np.abs(sigSSMesh.data[:,0] ) > ndp.yieldStressMax
+    #sigSSMesh.data[:,0][mask] = ndp.yieldStressMax
+    
+    mask1 = sigSSMesh.data[:,0]  > ndp.yieldStressMax
+    sigSSMesh.data[:,0][mask1] = ndp.yieldStressMax
+    mask2 = sigSSMesh.data[:,0]  < -1.*ndp.yieldStressMax
+    sigSSMesh.data[:,0][mask2] = -1.*ndp.yieldStressMax
 
 
 # In[175]:
@@ -1711,6 +1717,9 @@ def xdmfs_update():
     visc = viscMesh.save(xdmfPath + "visc_" + str(step) + ".h5")
     sigXX = sigXXMesh.save(xdmfPath + "sigXX_" + str(step) + ".h5")
     sigSS = sigSSMesh.save(xdmfPath + "sigSS_" + str(step) + ".h5")
+    sigII = strainRate_2ndInvariant.save(xdmfPath + "sigII_" + str(step) + ".h5")
+    
+    
     
     #part 2
     temperatureFn.xdmf(xdmfPath + "temp_" + str(step), tH, 'temperature', mh, 'mesh', modeltime=time)
@@ -1718,6 +1727,7 @@ def xdmfs_update():
     sigXXMesh.xdmf(xdmfPath+ "sigXX_" + str(step), sigXX, 'sigXX', mh, 'mesh', modeltime=time)
     sigSSMesh.xdmf(xdmfPath+ "sigSS_" + str(step), sigSS, 'sigSS', mh, 'mesh', modeltime=time)
     viscMesh.xdmf(xdmfPath+ "visc_" + str(step), visc , 'visc', mh, 'mesh', modeltime=time)
+    strainRate_2ndInvariant.xdmf(xdmfPath+ "sigII_" + str(step), sigII, 'sigII', mh, 'mesh', modeltime=time)
 
 
 # In[242]:
@@ -1806,7 +1816,7 @@ for f in fCollection:
 time = 0.  # Initial time
 step = 0 
 maxSteps = 2000      # Maximum timesteps 
-steps_output = 5   # output every N timesteps
+steps_output = 25   # output every N timesteps
 swarm_update = 10   # output every N timesteps
 faults_update = 10
 dt_model = 0.
