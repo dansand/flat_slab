@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[1]:
+# In[25]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[2]:
+# In[26]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -33,7 +33,7 @@ except:
     pass
 
 
-# In[3]:
+# In[27]:
 
 
 import os
@@ -49,12 +49,13 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[4]:
+# In[29]:
 
 
 import UWsubduction as usub
 import UWsubduction.params as params 
 import UWsubduction.utils as utils
+from UWsubduction.analysis import eig2d
 
 
 # In[5]:
@@ -1203,7 +1204,7 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 
 spId = 2
-midPlaneDepth = ndimlz(25.*ur.kilometer + 0.5*(modelDict_dim.faultThickness))
+midPlaneDepth = ndimlz(20.*ur.kilometer + 0.5*(modelDict_dim.faultThickness))
 
 midPlaneXs = np.arange(tm.get_boundaries(2)[0] + 2.*ds, tm.get_boundaries(2)[1] - 2.*ds, ds)
 midPlaneYs = np.ones(len(midPlaneXs)) * (1. - midPlaneDepth)
@@ -1598,10 +1599,15 @@ def update_values():
 #sigXXswarm =  2.*symStrainrate[0]*viscosityMapFn
 viscMesh = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
 sigXXMesh =  uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
+sigIIMesh =  uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
+eig1       = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=2 )
+
 viscMesh.data[:] = 0.
 sigXXMesh.data[:] = 0.
+sigIIMesh.data[:] = 0.
+eig1.data[:] = (0., 0.)
 
-sigXXFn = 2.*symStrainrate[0]*sigXXMesh
+#sigXXFn = 2.*symStrainrate[0]*sigXXMesh
 #projectorDevStress = uw.utils.MeshVariable_Projection(sigXXMesh, sigXXswarm  , type=0 )
 
 def swarm_to_mesh_update():    
@@ -1609,8 +1615,17 @@ def swarm_to_mesh_update():
     ix1, weights1, d1 = nn_evaluation(swarm.particleCoordinates.data, mesh.data, n=5, weighted=True)
     viscMesh.data[:,0] =  np.average(viscosityMapFn.evaluate(swarm)[:,0][ix1], weights=weights1, axis=len((weights1.shape)) - 1)
     #sigXXFn may need updating?
+    ssr = symStrainrate.evaluate(mesh) #this does need to be here, 
+    
     sigXXFn = 2.*symStrainrate[0]*viscMesh
     sigXXMesh.data[:] = sigXXFn.evaluate(mesh)
+    sigIIFn = 2.*strainRate_2ndInvariant*viscMesh
+    sigIIMesh.data[:] = sigIIFn.evaluate(mesh)
+    
+    #eigenvector
+    principalAngles  = np.apply_along_axis(eig2d, 1, ssr[:, :])[:,2]
+    eig1.data[:,0] = np.cos(np.radians(principalAngles - 90.)) #most compressive 
+    eig1.data[:,1] = np.sin(np.radians(principalAngles - 90.))
 
 
 # In[137]:
@@ -1714,20 +1729,22 @@ def xdmfs_update():
     mh = _mH
     tH = temperatureFn.save(xdmfPath + "temp_" + str(step) + ".h5")
     pH = pressureField.save(xdmfPath + "press_" + str(step) + ".h5")
+    eH = eig1.save(xdmfPath + "eig_" + str(step) + ".h5")
     visc = viscMesh.save(xdmfPath + "visc_" + str(step) + ".h5")
     sigXX = sigXXMesh.save(xdmfPath + "sigXX_" + str(step) + ".h5")
     sigSS = sigSSMesh.save(xdmfPath + "sigSS_" + str(step) + ".h5")
-    sigII = strainRate_2ndInvariant.save(xdmfPath + "sigII_" + str(step) + ".h5")
+    sigII = sigIIMesh.save(xdmfPath + "sigII_" + str(step) + ".h5")
     
     
     
     #part 2
     temperatureFn.xdmf(xdmfPath + "temp_" + str(step), tH, 'temperature', mh, 'mesh', modeltime=time)
     pressureField.xdmf(xdmfPath + "press_" + str(step), pH, 'pressure', mh, 'mesh', modeltime=time)
+    eig1.xdmf(xdmfPath + "eig_" + str(step), eH, 'eig', mh, 'mesh', modeltime=time)
     sigXXMesh.xdmf(xdmfPath+ "sigXX_" + str(step), sigXX, 'sigXX', mh, 'mesh', modeltime=time)
     sigSSMesh.xdmf(xdmfPath+ "sigSS_" + str(step), sigSS, 'sigSS', mh, 'mesh', modeltime=time)
     viscMesh.xdmf(xdmfPath+ "visc_" + str(step), visc , 'visc', mh, 'mesh', modeltime=time)
-    strainRate_2ndInvariant.xdmf(xdmfPath+ "sigII_" + str(step), sigII, 'sigII', mh, 'mesh', modeltime=time)
+    sigIIMesh.xdmf(xdmfPath+ "sigII_" + str(step), sigII, 'sigII', mh, 'mesh', modeltime=time)
 
 
 # In[242]:
