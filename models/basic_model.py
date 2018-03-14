@@ -10,19 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[35]:
+# In[19]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[13]:
-
-
-(250e3*80*10.)/1e6
-
-
-# In[36]:
+# In[20]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -39,7 +33,7 @@ except:
     pass
 
 
-# In[37]:
+# In[21]:
 
 
 import os
@@ -55,7 +49,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[38]:
+# In[22]:
 
 
 import UWsubduction as usub
@@ -64,7 +58,7 @@ import UWsubduction.utils as utils
 from UWsubduction.analysis import eig2d
 
 
-# In[39]:
+# In[23]:
 
 
 #load in parent stuff
@@ -74,13 +68,13 @@ from UWsubduction.analysis import eig2d
 #from unsupported_dan.UWsubduction.model import *
 
 
-# In[40]:
+# In[24]:
 
 
 #TectModel
 
 
-# In[41]:
+# In[25]:
 
 
 from unsupported_dan.utilities.interpolation import nn_evaluation
@@ -88,7 +82,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[42]:
+# In[26]:
 
 
 ############
@@ -150,14 +144,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[43]:
+# In[27]:
 
 
 #from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = params.UnitRegistry
 
 
-# In[44]:
+# In[28]:
 
 
 #pd refers to dimensional paramters
@@ -193,7 +187,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 
 
 
-# In[45]:
+# In[29]:
 
 
 md = edict({})
@@ -239,7 +233,7 @@ md.turnOffVels = False
 
 
 
-# In[46]:
+# In[30]:
 
 
 #first check for commandLineArgs:
@@ -256,7 +250,7 @@ paramDict_dim = pd
 #print(md.depth, md.turnOffVels, type(md.turnOffVels),pd.viscosityFault
 
 
-# In[47]:
+# In[31]:
 
 
 
@@ -280,18 +274,31 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 print( type(md.turnOffVels))
 
 
-# In[48]:
+# In[34]:
 
 
 #1./ndimlz(1.*ur.megapascal)
-1./ndimlz(1.*ur.megayear)
+#1./ndimlz(1.*ur.megayear)
 
 
-# In[49]:
+# In[38]:
 
 
 #delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
 #delt.to(ur.megayear)
+
+
+
+# In[45]:
+
+
+
+
+
+# In[43]:
+
+
+
 
 
 # ## Build / refine mesh, Stokes Variables
@@ -1749,7 +1756,7 @@ def xdmfs_update():
     sigXX = sigXXMesh.save(xdmfPath + "sigXX_" + str(step) + ".h5")
     sigSS = sigSSMesh.save(xdmfPath + "sigSS_" + str(step) + ".h5")
     sigII = sigIIMesh.save(xdmfPath + "sigII_" + str(step) + ".h5")
-    eSS = sigSSMesh.save(xdmfPath + "eSS_" + str(step) + ".h5")
+    eSS = eSSMesh.save(xdmfPath + "eSS_" + str(step) + ".h5")
 
     
     
