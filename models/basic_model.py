@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[1]:
+# In[36]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[2]:
+# In[37]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -33,7 +33,7 @@ except:
     pass
 
 
-# In[3]:
+# In[38]:
 
 
 import os
@@ -49,7 +49,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[4]:
+# In[39]:
 
 
 import UWsubduction as usub
@@ -58,7 +58,7 @@ import UWsubduction.utils as utils
 from UWsubduction.analysis import eig2d
 
 
-# In[5]:
+# In[40]:
 
 
 #load in parent stuff
@@ -68,13 +68,13 @@ from UWsubduction.analysis import eig2d
 #from unsupported_dan.UWsubduction.model import *
 
 
-# In[6]:
+# In[41]:
 
 
 #TectModel
 
 
-# In[7]:
+# In[42]:
 
 
 from unsupported_dan.utilities.interpolation import nn_evaluation
@@ -82,7 +82,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[8]:
+# In[43]:
 
 
 ############
@@ -144,14 +144,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[9]:
+# In[44]:
 
 
 #from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = params.UnitRegistry
 
 
-# In[10]:
+# In[45]:
 
 
 #pd refers to dimensional paramters
@@ -187,7 +187,18 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 
 
 
-# In[11]:
+# In[74]:
+
+
+#(1400./1300.0)*pd.diffusionVolume , pd.diffusionEnergy 
+
+#pd.viscosityFault
+
+#(8./10)**2
+40/45.
+
+
+# In[46]:
 
 
 md = edict({})
@@ -233,7 +244,7 @@ md.turnOffVels = False
 
 
 
-# In[12]:
+# In[47]:
 
 
 #first check for commandLineArgs:
@@ -250,7 +261,7 @@ paramDict_dim = pd
 #print(md.depth, md.turnOffVels, type(md.turnOffVels),pd.viscosityFault
 
 
-# In[13]:
+# In[48]:
 
 
 
@@ -274,14 +285,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 print( type(md.turnOffVels))
 
 
-# In[14]:
+# In[49]:
 
 
 #1./ndimlz(1.*ur.megapascal)
 #1./ndimlz(1.*ur.megayear)
 
 
-# In[15]:
+# In[50]:
 
 
 #delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
@@ -289,9 +300,15 @@ print( type(md.turnOffVels))
 
 
 
+# In[57]:
+
+
+#params.rayleighNumber/1e8
+
+
 # ## Build / refine mesh, Stokes Variables
 
-# In[16]:
+# In[51]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
@@ -1739,7 +1756,7 @@ def xdmfs_update():
     #part1
     mh = _mH
     tH = temperatureFn.save(xdmfPath + "temp_" + str(step) + ".h5")
-    vH = velocityField.save(xdmfPath + "temp_" + str(step) + ".h5")
+    vH = velocityField.save(xdmfPath + "vel_" + str(step) + ".h5")
     pH = pressureField.save(xdmfPath + "press_" + str(step) + ".h5")
     eH = eig1.save(xdmfPath + "eig_" + str(step) + ".h5")
     visc = viscMesh.save(xdmfPath + "visc_" + str(step) + ".h5")
