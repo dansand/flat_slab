@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[36]:
+# In[19]:
 
 
 #!apt-cache policy petsc-dev
 
 
-# In[37]:
+# In[20]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -33,7 +33,7 @@ except:
     pass
 
 
-# In[38]:
+# In[21]:
 
 
 import os
@@ -49,7 +49,7 @@ import operator
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[39]:
+# In[22]:
 
 
 import UWsubduction as usub
@@ -58,7 +58,7 @@ import UWsubduction.utils as utils
 from UWsubduction.analysis import eig2d
 
 
-# In[40]:
+# In[23]:
 
 
 #load in parent stuff
@@ -68,13 +68,13 @@ from UWsubduction.analysis import eig2d
 #from unsupported_dan.UWsubduction.model import *
 
 
-# In[41]:
+# In[24]:
 
 
 #TectModel
 
 
-# In[42]:
+# In[25]:
 
 
 from unsupported_dan.utilities.interpolation import nn_evaluation
@@ -82,7 +82,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[43]:
+# In[26]:
 
 
 ############
@@ -144,14 +144,14 @@ uw.barrier() #Barrier here so no procs run the check in the next cell too early
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[44]:
+# In[27]:
 
 
 #from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = params.UnitRegistry
 
 
-# In[45]:
+# In[28]:
 
 
 #pd refers to dimensional paramters
@@ -187,18 +187,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 
 
 
-# In[74]:
-
-
-#(1400./1300.0)*pd.diffusionVolume , pd.diffusionEnergy 
-
-#pd.viscosityFault
-
-#(8./10)**2
-40/45.
-
-
-# In[46]:
+# In[29]:
 
 
 md = edict({})
@@ -244,7 +233,7 @@ md.turnOffVels = False
 
 
 
-# In[47]:
+# In[30]:
 
 
 #first check for commandLineArgs:
@@ -261,7 +250,7 @@ paramDict_dim = pd
 #print(md.depth, md.turnOffVels, type(md.turnOffVels),pd.viscosityFault
 
 
-# In[48]:
+# In[31]:
 
 
 
@@ -285,14 +274,14 @@ assert ndimlz(paramDict_dim.refLength) == 1.0
 print( type(md.turnOffVels))
 
 
-# In[49]:
+# In[34]:
 
 
 #1./ndimlz(1.*ur.megapascal)
 #1./ndimlz(1.*ur.megayear)
 
 
-# In[50]:
+# In[38]:
 
 
 #delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
@@ -300,15 +289,21 @@ print( type(md.turnOffVels))
 
 
 
-# In[57]:
+# In[45]:
 
 
-#params.rayleighNumber/1e8
+
+
+
+# In[43]:
+
+
+
 
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[51]:
+# In[50]:
 
 
 #(ndp.rightLim - ndp.leftLim)/ndp.depth
@@ -316,7 +311,7 @@ print( type(md.turnOffVels))
 #yres, xres, halfWidth, md.elementType, md.depth
 
 
-# In[17]:
+# In[51]:
 
 
 yres = int(md.res)
@@ -344,7 +339,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[18]:
+# In[52]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -368,13 +363,13 @@ if md.refineVert:
         mesh.data[:,1] = mesh.data[:,1] + 1.0
 
 
-# In[19]:
+# In[53]:
 
 
 mesh.minCoord[0], mesh.maxCoord[0]
 
 
-# In[20]:
+# In[54]:
 
 
 test = 1000*ur.kilometer/ (5*ur.cm/ur.year)
@@ -383,7 +378,7 @@ test.to(ur.megayear)
 
 # ## Build plate model
 
-# In[21]:
+# In[55]:
 
 
 endTime = ndimlz(35*ur.megayear) 
@@ -391,7 +386,7 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[22]:
+# In[56]:
 
 
 #velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
@@ -408,7 +403,7 @@ vp2end= ndimlz(2.*ur.centimeter/ur.year )
 
 
 
-# In[23]:
+# In[57]:
 
 
 tm = usub.TectonicModel(mesh, 0, endTime, plateModelDt)
@@ -429,13 +424,13 @@ if md.turnOffVels:
     tm.node[2]['velocities'][ix_:] = np.nan
 
 
-# In[24]:
+# In[58]:
 
 
 #tm.node[2]['velocities']
 
 
-# In[25]:
+# In[59]:
 
 
 #switch off SP velocity
@@ -444,7 +439,7 @@ if md.turnOffVels:
 #tm.node[2]['velocities'] = velsFalse_
 
 
-# In[26]:
+# In[60]:
 
 
 ridgeLoc = -0.7
@@ -456,7 +451,7 @@ tm.add_subzone(2, 3, subLoc, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrenc
 tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 
-# In[27]:
+# In[61]:
 
 
 #((1400*ur.kilometer)/(35*ur.megayear)).to(ur.cm/ ur.year )
@@ -465,7 +460,7 @@ params.Kt.to(ur.megayear)
 
 # ## Build plate age / temperature Fns
 
-# In[28]:
+# In[62]:
 
 
 pIdFn = tm.plate_id_fn()
@@ -479,13 +474,13 @@ fnAge_map = fn.branching.map(fn_key = pIdFn ,
 #fig.show()
 
 
-# In[29]:
+# In[63]:
 
 
 #ndp.potentialTemp
 
 
-# In[30]:
+# In[64]:
 
 
 coordinate = fn.input()
@@ -500,14 +495,13 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, ndp.pote
 
 
 
-# In[35]:
+# In[73]:
 
 
 #np.math.sqrt(25.)/np.math.sqrt(15.)
-2.32*np.math.sqrt(1.*md.slabAge) *2900.0, md.slabAge
 
 
-# In[32]:
+# In[65]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -1230,7 +1224,7 @@ population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006,
 
 
 spId = 2
-midPlaneDepth = ndimlz(15.*ur.kilometer + 0.5*(modelDict_dim.faultThickness))
+midPlaneDepth = ndimlz(20.*ur.kilometer + 0.5*(modelDict_dim.faultThickness))
 
 midPlaneXs = np.arange(tm.get_boundaries(2)[0] + 2.*ds, tm.get_boundaries(2)[1] - 2.*ds, ds)
 midPlaneYs = np.ones(len(midPlaneXs)) * (1. - midPlaneDepth)
@@ -1756,7 +1750,6 @@ def xdmfs_update():
     #part1
     mh = _mH
     tH = temperatureFn.save(xdmfPath + "temp_" + str(step) + ".h5")
-    vH = velocityField.save(xdmfPath + "vel_" + str(step) + ".h5")
     pH = pressureField.save(xdmfPath + "press_" + str(step) + ".h5")
     eH = eig1.save(xdmfPath + "eig_" + str(step) + ".h5")
     visc = viscMesh.save(xdmfPath + "visc_" + str(step) + ".h5")
@@ -1770,7 +1763,6 @@ def xdmfs_update():
     #part 2
     temperatureFn.xdmf(xdmfPath + "temp_" + str(step), tH, 'temperature', mh, 'mesh', modeltime=time)
     pressureField.xdmf(xdmfPath + "press_" + str(step), pH, 'pressure', mh, 'mesh', modeltime=time)
-    velocityField.xdmf(xdmfPath + "vel_" + str(step), vH, 'velocity', mh, 'mesh', modeltime=time)
     eig1.xdmf(xdmfPath + "eig_" + str(step), eH, 'eig', mh, 'mesh', modeltime=time)
     sigXXMesh.xdmf(xdmfPath+ "sigXX_" + str(step), sigXX, 'sigXX', mh, 'mesh', modeltime=time)
     sigSSMesh.xdmf(xdmfPath+ "sigSS_" + str(step), sigSS, 'sigSS', mh, 'mesh', modeltime=time)
@@ -2005,10 +1997,4 @@ while time < tm.times[-1] and step < maxSteps:
 
 
 #tm.is_ridge((3,3))
-
-
-# In[48]:
-
-
-(128/192.)**2
 
