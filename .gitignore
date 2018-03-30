@@ -13,3 +13,6 @@
 **/output/
 **/datas.tar.gz
 ./datas.tar.gz
+**/*.csv
+**/*.png
+
