@@ -10,13 +10,7 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[19]:
-
-
-#!apt-cache policy petsc-dev
-
-
-# In[20]:
+# In[91]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -33,7 +27,7 @@ except:
     pass
 
 
-# In[21]:
+# In[92]:
 
 
 import os
@@ -45,20 +39,22 @@ import glucifer
 from easydict import EasyDict as edict
 import networkx as nx
 import operator
-
+import pickle
+import pint
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[22]:
+# In[93]:
 
 
 import UWsubduction as usub
 import UWsubduction.params as params 
 import UWsubduction.utils as utils
 from UWsubduction.analysis import eig2d
+from UWsubduction.utils import checkpoint
 
 
-# In[23]:
+# In[94]:
 
 
 #load in parent stuff
@@ -68,13 +64,13 @@ from UWsubduction.analysis import eig2d
 #from unsupported_dan.UWsubduction.model import *
 
 
-# In[24]:
+# In[95]:
 
 
 #TectModel
 
 
-# In[25]:
+# In[96]:
 
 
 from unsupported_dan.utilities.interpolation import nn_evaluation
@@ -82,7 +78,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[26]:
+# In[97]:
 
 
 ############
@@ -139,19 +135,33 @@ if uw.rank()==0:
 uw.barrier() #Barrier here so no procs run the check in the next cell too early
 
 
+# In[98]:
+
+
+#*************CHECKPOINT-BLOCK**************#
+
+#cp = checkpoint(outputPath + 'checkpoint/', loadpath='./results/A/1/checkpoint/10')
+cp = checkpoint(outputPath + 'checkpoint/')
+
+
+if cp.restart:
+    print('restarting from checkpoint {}'.format(cp.step()))
+#*************CHECKPOINT-BLOCK**************#
+
+
 # ## Parameters / Scaling
 # 
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[27]:
+# In[99]:
 
 
 #from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
 u = params.UnitRegistry
 
 
-# In[28]:
+# In[100]:
 
 
 #pd refers to dimensional paramters
@@ -187,7 +197,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 
 
 
-# In[29]:
+# In[101]:
 
 
 md = edict({})
@@ -211,7 +221,7 @@ md.radiusOfCurv = 200.*u.km                                        #radius of cu
 md.slabAge=20.*u.megayears                                      #age of subduction plate at trench
 md.opAgeAtTrench=15.*u.megayears                                        #age of op
 #numerical and computation params
-md.res=128
+md.res=48
 md.ppc=25                                                         #particles per cell
 md.elementType="Q1/dQ0"
 md.refineHoriz = True
@@ -230,10 +240,11 @@ md.wedgeDeep=150*u.km
 md.wedgeThickness = 200*u.km
 md.turnOnWedge = 20*u.megayears
 md.turnOffVels = False
+md.checkpointEvery = 25
+md.restartParams = True #read in saved checkpoint md/pd 
 
 
-
-# In[30]:
+# In[102]:
 
 
 #first check for commandLineArgs:
@@ -242,15 +253,10 @@ sysArgs = sys.argv
 utils.easy_args(sysArgs, pd)
 utils.easy_args(sysArgs, md)
 
-
-#for some reason I'm changing the names...
-modelDict_dim = md
-paramDict_dim = pd
-
-#print(md.depth, md.turnOffVels, type(md.turnOffVels),pd.viscosityFault
+#mddim = md
 
 
-# In[31]:
+# In[103]:
 
 
 
@@ -258,68 +264,73 @@ paramDict_dim = pd
 #define some more concise names
 sca = params.sub_scaling
 ndimlz = sca.nonDimensionalize
+
+
 #build the dimensionless paramter / model dictionaries
-ndp = params.build_nondim_dict(paramDict_dim  , sca)   
-md = params.build_nondim_dict(modelDict_dim  , sca)
+npd = params.build_nondim_dict(pd  , sca)   
+nmd = params.build_nondim_dict(md  , sca)
 ur = u
 
-assert ndimlz(paramDict_dim.refLength) == 1.0
+assert ndimlz(pd.refLength) == 1.0
+
+
+
+# In[104]:
+
 
 # changes to base params: (These will keep changing if the notebook is run again without restarting!)
-#md.faultThickness *= 1.5 #15 km
-#md.res = 48
+#nmd.faultThickness *= 1.5 #15 km
+#nmd.res = 48
 
 
-#print(md.depth, md.turnOffVels, type(md.turnOffVels),pd.viscosityFault)
-print( type(md.turnOffVels))
+# In[105]:
 
 
-# In[34]:
+#*************CHECKPOINT-BLOCK**************#
 
 
-#1./ndimlz(1.*ur.megapascal)
-#1./ndimlz(1.*ur.megayear)
+pint.set_application_registry(ur) #https://github.com/hgrecco/pint/issues/146
+
+#if restart, attempt to read in saved dicts. 
+if cp.restart :
+    #try:
+    with open(os.path.join(cp.loadpath, 'pd.pkl'), 'rb') as fp:
+        pd = pickle.load(fp)
+    with open(os.path.join(cp.loadpath, 'md.pkl'), 'rb') as fp:
+        md = pickle.load(fp)
+        
+        
+    npd = params.build_nondim_dict(pd  , sca)   
+    nmd = params.build_nondim_dict(md  , sca)
 
 
-# In[38]:
-
-
-#delt = 2000*ur.kilometer/(7*ur.centimeter/ur.year)
-#delt.to(ur.megayear)
-
-
-
-# In[45]:
-
-
-
-
-
-# In[43]:
-
-
-
+    
+#add dicts to the checkpointinng object
+cp.addDict(pd, 'pd')
+cp.addDict(md, 'md')
+#*************CHECKPOINT-BLOCK**************#
 
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[50]:
+# In[106]:
 
 
-#(ndp.rightLim - ndp.leftLim)/ndp.depth
+#(npd.rightLim - npd.leftLim)/npd.depth
 #md.res = 64
 #yres, xres, halfWidth, md.elementType, md.depth
+#nmd.depth
 
 
-# In[51]:
+# In[107]:
 
 
-yres = int(md.res)
-xres = int(md.res*6) 
+yres = int(nmd.res)
+xres = int(nmd.res*6) 
 
-halfWidth = 0.5*md.depth*md.aspectRatio 
+halfWidth = 0.5*nmd.depth*nmd.aspectRatio 
 
-minCoord_    = (-1.*halfWidth, 1. - md.depth) 
+minCoord_    = (-1.*halfWidth, 1. - nmd.depth) 
 maxCoord_    = (halfWidth, 1.)
 
 mesh = uw.mesh.FeMesh_Cartesian( elementType = (md.elementType),
@@ -339,46 +350,50 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[52]:
+# In[108]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
 
-if md.refineHoriz:
+if nmd.refineHoriz:
     
     with mesh.deform_mesh():
         
         normXs = 2.*mesh.data[:,0]/(mesh.maxCoord[0] - mesh.minCoord[0])
-        mesh.data[:,0] = mesh.data[:,0] * np.exp(md.meshRefineFactor*normXs**2) / np.exp(md.meshRefineFactor*1.0**2)    
+        mesh.data[:,0] = mesh.data[:,0] * np.exp(nmd.meshRefineFactor*normXs**2) / np.exp(nmd.meshRefineFactor*1.0**2)    
     
-if md.refineVert:
+if nmd.refineVert:
 
     with mesh.deform_mesh():
         
         mesh.data[:,1] = mesh.data[:,1] - 1.0
 
         normYs = -1.*mesh.data[:,1]/(mesh.maxCoord[1] - mesh.minCoord[1])
-        mesh.data[:,1] = mesh.data[:,1] * np.exp(md.meshRefineFactor*normYs**2)/np.exp(md.meshRefineFactor*1.0**2)
+        mesh.data[:,1] = mesh.data[:,1] * np.exp(nmd.meshRefineFactor*normYs**2)/np.exp(nmd.meshRefineFactor*1.0**2)
 
         mesh.data[:,1] = mesh.data[:,1] + 1.0
 
 
-# In[53]:
+# In[109]:
 
 
-mesh.minCoord[0], mesh.maxCoord[0]
-
-
-# In[54]:
-
-
-test = 1000*ur.kilometer/ (5*ur.cm/ur.year)
-test.to(ur.megayear)
+#*************CHECKPOINT-BLOCK**************#
+cp.addObject(velocityField,'velocityField')
+cp.addObject(pressureField,'pressureField')
+cp.addObject(temperatureField,'temperatureField')
+cp.addObject(temperatureDotField,'temperatureDotField')
+    
+if cp.restart:
+    velocityField.load(cp.loadpath + '/velocityField.h5')
+    pressureField.load(cp.loadpath + '/pressureField.h5')
+    temperatureField.load(cp.loadpath + '/temperatureField.h5')
+    temperatureDotField.load(cp.loadpath + '/temperatureDotField.h5')
+#*************CHECKPOINT-BLOCK**************#
 
 
 # ## Build plate model
 
-# In[55]:
+# In[110]:
 
 
 endTime = ndimlz(35*ur.megayear) 
@@ -386,10 +401,15 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[56]:
+# In[111]:
 
 
-#velocities of the plates (1 - 3) ams well as the plate boundary (1,2)
+#location of plate boundaries
+
+ridgeLoc = -0.7
+subLoc = ridgeLoc  + ndimlz(2100.*ur.kilometer)
+
+#velocities of the plates (1 - 3) as well as the plate boundary (1,2)
 vp1= ndimlz(0.*ur.centimeter/ur.year )
 
 vp3start= ndimlz(-3.*ur.centimeter/ur.year )
@@ -403,64 +423,71 @@ vp2end= ndimlz(2.*ur.centimeter/ur.year )
 
 
 
-# In[57]:
+# In[112]:
 
 
+#build tectonic model
 tm = usub.TectonicModel(mesh, 0, endTime, plateModelDt)
-
 velsP2 = np.linspace(vp2start, vp2end, len(tm.times))
 velsP3 = np.linspace(vp3start, vp3end, len(tm.times))
 
-
-
+#add plates
 tm.add_plate(1, velocities=vp1)
 #tm.add_plate(2, velocities=vp2start)
 tm.add_plate(2, velocities=velsP2)
 tm.add_plate(3, velocities=velsP3)
 
 
-if md.turnOffVels:
-    ix_ = np.argmin(np.abs(tm.times - md.turnOnWedge))
-    tm.node[2]['velocities'][ix_:] = np.nan
+#*************CHECKPOINT-BLOCK**************#
+if not cp.restart:
+    
+
+    if nmd.turnOffVels:
+        ix_ = np.argmin(np.abs(tm.times - nmd.turnOnWedge))
+        tm.node[2]['velocities'][ix_:] = np.nan
+
+    #add plate boundaries 
+    tm.add_left_boundary(1, plateInitAge=nmd.slabAge/3., velocities=False)
+    tm.add_ridge(1,2, ridgeLoc, velocities=vb12)
+    tm.add_subzone(2, 3, subLoc, subInitAge=nmd.slabAge, upperInitAge=nmd.opAgeAtTrench)
+    tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
 
 
-# In[58]:
+#if restart, read in saved dictionary with updated info.
+else:
+    with open(os.path.join(cp.loadpath, 'tmDict.pkl'), 'rb') as fp:
+                            _tmDict = pickle.load(fp)
+    
+    tm.pop_from_dict_of_lists(_tmDict)
+            
+
+#now create the tmDict dictionary and add to the checkpoint object
+#tmDict should remain updated as we update the tm
+tmDict = nx.to_dict_of_dicts(tm)
+cp.addDict(tmDict, 'tmDict')
+#*************CHECKPOINT-BLOCK**************#
 
 
-#tm.node[2]['velocities']
+# In[114]:
 
 
-# In[59]:
+#tmDict = nx.to_dict_of_dicts(tm)
+#tmDict[1].keys()
 
 
-#switch off SP velocity
-#velsFalse_ = np.zeros(len(tm.times))
-#velsFalse_.fill(np.nan)
-#tm.node[2]['velocities'] = velsFalse_
+# In[117]:
 
 
-# In[60]:
-
-
-ridgeLoc = -0.7
-subLoc = ridgeLoc  + ndimlz(2100.*ur.kilometer)
-
-tm.add_left_boundary(1, plateInitAge=md.slabAge/3., velocities=False)
-tm.add_ridge(1,2, ridgeLoc, velocities=vb12)
-tm.add_subzone(2, 3, subLoc, subInitAge=md.slabAge, upperInitAge=md.opAgeAtTrench)
-tm.add_right_boundary(3, plateInitAge=0.0, velocities=False)
-
-
-# In[61]:
-
-
-#((1400*ur.kilometer)/(35*ur.megayear)).to(ur.cm/ ur.year )
-params.Kt.to(ur.megayear)
+#tm2 = usub.TectonicModel(mesh, 0, endTime, plateModelDt)#
+#with open(os.path.join(cp.loadpath, 'tmDict.pkl'), 'rb') as fp:
+#                            _tmDict = pickle.load(fp)
+#tm2.pop_from_dict_of_lists(_tmDict)
+#tm2.node = tm.node
 
 
 # ## Build plate age / temperature Fns
 
-# In[62]:
+# In[118]:
 
 
 pIdFn = tm.plate_id_fn()
@@ -474,13 +501,7 @@ fnAge_map = fn.branching.map(fn_key = pIdFn ,
 #fig.show()
 
 
-# In[63]:
-
-
-#ndp.potentialTemp
-
-
-# In[64]:
+# In[119]:
 
 
 coordinate = fn.input()
@@ -488,20 +509,20 @@ depthFn = mesh.maxCoord[1] - coordinate[1]
 
 platethickness = 2.32*fn.math.sqrt(1.*fnAge_map )  
 
-halfSpaceTemp = ndp.potentialTemp_*fn.math.erf((depthFn)/(2.*fn.math.sqrt(1.*fnAge_map)))
+halfSpaceTemp = npd.potentialTemp_*fn.math.erf((depthFn)/(2.*fn.math.sqrt(1.*fnAge_map)))
 
-plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, ndp.potentialTemp_ ), 
+plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, npd.potentialTemp_ ), 
                                            (True,                      halfSpaceTemp)  ))
 
 
 
-# In[73]:
+# In[120]:
 
 
 #np.math.sqrt(25.)/np.math.sqrt(15.)
 
 
-# In[65]:
+# In[121]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -511,27 +532,56 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, ndp.pote
 
 # ## Make swarm and Swarm Vars
 
-# In[32]:
+# In[122]:
 
+
+#swarm = uw.swarm.Swarm(mesh=mesh, particleEscape=True)
+#cp.addObject(swarm,'swarm')
+#layout = uw.swarm.layouts.PerCellRandomLayout(swarm=swarm, particlesPerCell=int(nmd.ppc))
+#swarm.populate_using_layout( layout=layout ) # Now use it to populate.
+
+
+# In[123]:
+
+
+#*************CHECKPOINT-BLOCK**************#
 
 swarm = uw.swarm.Swarm(mesh=mesh, particleEscape=True)
-layout = uw.swarm.layouts.PerCellRandomLayout(swarm=swarm, particlesPerCell=int(md.ppc))
-swarm.populate_using_layout( layout=layout ) # Now use it to populate.
-proxyTempVariable = swarm.add_variable( dataType="double", count=1 )
+cp.addObject(swarm,'swarm')
+
 proximityVariable      = swarm.add_variable( dataType="int", count=1 )
+cp.addObject(proximityVariable,'proximityVariable')
+
+proxyTempVariable = swarm.add_variable( dataType="double", count=1 )
+cp.addObject(proxyTempVariable,'proxyTempVariable')
+
+
+
+if cp.restart:
+    swarm.load(cp.loadpath + '/swarm.h5')
+    proximityVariable.load(cp.loadpath + '/proximityVariable.h5')
+    proxyTempVariable.load(cp.loadpath + '/proxyTempVariable.h5')   
+
+
+else:
+    layout = uw.swarm.layouts.PerCellRandomLayout(swarm=swarm, particlesPerCell=int(nmd.ppc))
+    swarm.populate_using_layout( layout=layout ) # Now use it to populate.
+    
+    proximityVariable.data[:] = 0
+    proxyTempVariable.data[:] = 1.0 #note 1!!!
+
+#*************CHECKPOINT-BLOCK**************#
+
+#these guys don't need checkpointing
 signedDistanceVariable = swarm.add_variable( dataType="double", count=1 )
 wedgeVariable = swarm.add_variable( dataType="int", count=1 )
-
-#
-proxyTempVariable.data[:] = 1.0
-proximityVariable.data[:] = 0
 signedDistanceVariable.data[:] = 0.0
 wedgeVariable.data[:] = 0
 
 
 # ## Create tmUwMap
 
-# In[33]:
+# In[124]:
 
 
 #Now we have built are primary FEM / Swarm objects, we collect some of these in a dictionary,
@@ -545,14 +595,14 @@ tmUwMap = usub.tm_uw_map([], velocityField, swarm,
 # 
 # * For more information see, `UWsubduction/Background/interface2D`
 
-# In[34]:
+# In[125]:
 
 
 def circGradientFn(S):
     if S == 0.:
         return 0.
-    elif S < md.radiusOfCurv:
-        return max(-S/np.sqrt((md.radiusOfCurv**2 - S**2)), -1e3)
+    elif S < nmd.radiusOfCurv:
+        return max(-S/np.sqrt((nmd.radiusOfCurv**2 - S**2)), -1e3)
     else:
         return -1e5
     
@@ -560,47 +610,62 @@ def circGradientFn(S):
 def circGradientFn2(S):
     if S == 0.:
         return 0.
-    elif S < 1.*md.radiusOfCurv:
-        return max(-S/np.sqrt((md.radiusOfCurv**2 - S**2)), -3.)
+    elif S < 1.*nmd.radiusOfCurv:
+        return max(-S/np.sqrt((nmd.radiusOfCurv**2 - S**2)), -3.)
     else:
         return -3.
 
 def circGradientFn3(S):
-    if S < 1.*md.radiusOfCurv:
+    if S < 1.*nmd.radiusOfCurv:
         return circGradientFn2(S)
     else:
-        return min(circGradientFn2(2.6*md.radiusOfCurv - S), -0.1)
+        return min(circGradientFn2(2.6*nmd.radiusOfCurv - S), -0.1)
     
 
 
-# In[35]:
+# In[126]:
 
 
 #define fault particle spacing
 ds = (tm.maxX - tm.minX)/(8.*tm.mesh.elementRes[0])
-
 fCollection = usub.interface_collection([])
 
-deepDepth = ndimlz(150.*ur.kilometer)
 
-for e in tm.undirected.edges():
-    if tm.is_subduction_boundary(e):
-        usub.build_slab_distance(tm, e, circGradientFn3, deepDepth, tmUwMap)
-        #build_slab_distance(tm, e, circGradientFn, md.slabInitMaxDepth, tmUwMap)        
-        fb = usub.build_fault(tm, e, circGradientFn3, md.faultThickness , deepDepth, ds, md.faultThickness, tmUwMap)
-        #fb = build_fault(tm, e, circGradientFn, md.faultThickness , md.slabInitMaxDepth, ds, md.faultThickness, tmUwMap)
+#*************CHECKPOINT-BLOCK**************#
 
-        fCollection.append(fb)
+if not cp.restart:
+    for e in tm.undirected.edges():
+        if tm.is_subduction_boundary(e):
+            usub.build_slab_distance(tm, e, circGradientFn3, nmd.slabInitMaxDepth, tmUwMap)
+            sub_interface = usub.build_fault(tm, e, circGradientFn3, nmd.faultThickness , 
+                                  nmd.slabInitMaxDepth, ds, nmd.faultThickness, tmUwMap)
+            cp.addObject(sub_interface.swarm, 'f_' + str(sub_interface.ID))
+            fCollection.append(sub_interface)
 
-#
-usub.build_slab_temp(tmUwMap, ndp.potentialTemp_, md.slabAge)
-fnJointTemp = fn.misc.min(proxyTempVariable,plateTempProxFn)
+    #
+    usub.build_slab_temp(tmUwMap, npd.potentialTemp_, nmd.slabAge)
+    fnJointTemp = fn.misc.min(proxyTempVariable,plateTempProxFn)
 
-#And now reevaluate this guy on the swarm
-proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
+    #And now reevaluate this guy on the swarm
+    proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
+
+else:
+    for e in tm.undirected.edges():
+        if tm.is_subduction_boundary(e):
+            spId = tm.subduction_edge_order((e[0], e[1]))[0] 
+            plateBounds = np.sort(tm.get_boundaries(spId))
+            #this fallows the pattern of usub.build_fault, but the inside point routine is pretty bad 
+            insidePt = (np.array(plateBounds).mean(), 1 - nmd.slabInitMaxDepth*5) 
+            sub_interface = usub.interface2D(tm.mesh, tmUwMap.velField, [], [],
+                        nmd.faultThickness , spId, insidePt=insidePt)
+            sub_interface.swarm.load(cp.loadpath + '/f_' + str(sub_interface.ID) + '.h5' )
+            cp.addObject(sub_interface.swarm, 'f_' + str(sub_interface.ID))
+            fCollection.append(sub_interface)
+
+#*************CHECKPOINT-BLOCK**************#
 
 
-# In[36]:
+# In[127]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -613,16 +678,16 @@ proxyTempVariable.data[:] = fnJointTemp.evaluate(swarm)
 # ##  Define subduction fault evolution (rebuild/destroy)
 # 
 # 
-# In this section we setup some functions to help manage the spatial distribution of faults
+# In this section we setup some functions to help manage the spatial distribution of the subduction interface
 
-# In[37]:
+# In[128]:
 
 
 # Setup a swarm to define the replacment positions
 
 fThick= fCollection[0].thickness
 
-faultloc = 1. - md.faultThickness*md.faultLocFac
+faultloc = 1. - nmd.faultThickness*nmd.faultLocFac
 
 allxs = np.arange(mesh.minCoord[0], mesh.maxCoord[0], ds )[:-1]
 allys = (mesh.maxCoord[1] - fThick)*np.ones(allxs.shape)
@@ -652,18 +717,9 @@ faultAddFn =  fn.misc.constant(True)
 #This removes the regions around the ridges from the velocity nodes
 velMask1 = tm.t2f(tm.ridge_mask_fn(dist=ndimlz(25*ur.km)))
 #This removes the regions around the subduction from the velocity nodes
-velMask2= tm.t2f(tm.subduction_mask_fn(dist=md.faultViscHorizTaperStart))
+velMask2= tm.t2f(tm.subduction_mask_fn(dist=nmd.faultViscHorizTaperStart))
 #combine
 velMaskFn = operator.and_( velMask1,  velMask2)
-
-
-#order is very important here
-#dummy = remove_fault_drift(fCollection, faultloc)
-#dummy = pop_or_perish(tm, fCollection, faultMasterSwarm, faultAddFn , ds)
-#dummy = remove_faults_from_boundaries(tm, fCollection, faultRmfn )
-
-
-# In[38]:
 
 
 dummy = usub.remove_fault_drift(fCollection, faultloc)
@@ -671,35 +727,7 @@ dummy = usub.pop_or_perish(tm, fCollection, faultMasterSwarm, faultAddFn , ds)
 dummy = usub.remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 
 
-# In[39]:
-
-
-#maskFn_ = tm.t2f(faultRmfn)
-#pIdFn = tm.plate_id_fn(maskFn=maskFn_)
-
-
-# In[40]:
-
-
-#def buildPlateBoundMarkerSwarms(tectModel):
-#    boundSwarmList = []
-#    for e in tectModel.undirected.edges():
-#        loc = tectModel.get_bound_loc(e)
-#        #print(loc)
-#        points = np.array([loc, tectModel.mesh.maxCoord[1] - 1e-6])
-#        _swarm = uw.swarm.Swarm(tectModel.mesh)
-#        _swarm.add_particles_with_coordinates(np.expand_dims(points, 0))
-#        boundSwarmList.append(_swarm)
-#    return boundSwarmList
-
-
-# In[41]:
-
-
-#boundSwarmList = buildPlateBoundMarkerSwarms(tm)
-
-
-# In[42]:
+# In[129]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -714,13 +742,7 @@ dummy = usub.remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 # 
 # 
 
-# In[43]:
-
-
-proximityVariable.data[:] = 0
-
-
-# In[44]:
+# In[130]:
 
 
 for f in fCollection:
@@ -728,13 +750,13 @@ for f in fCollection:
     f.set_proximity_director(swarm, proximityVariable, searchFac = 2., locFac=1.0)
 
 
-# In[45]:
+# In[131]:
 
 
 #update_faults()
 
 
-# In[46]:
+# In[132]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -749,7 +771,7 @@ for f in fCollection:
 #figProx.save_database('test.gldb')
 
 
-# In[47]:
+# In[57]:
 
 
 #testMM = fn.view.min_max(uw.function.input(f.swarm.particleCoordinates))
@@ -758,30 +780,31 @@ for f in fCollection:
 
 # ## Define Wedge region
 
-# In[48]:
+# In[58]:
 
 
-wedgeVariable.data[:] = 0
+
 def build_wedge_region():
     
+    #reset this every time
     wedgeVariable.data[:] = 0
 
     sd, pts0 = fCollection[0].compute_signed_distance(swarm.particleCoordinates.data, 10.)
 
     #1./ndimlz(1*ur.megayear)
-    wedgeVariable.data[np.logical_and(sd<(-1.*md.faultThickness),sd>-1.*md.wedgeThickness)] = 1
-    mask = np.where(np.logical_or((1. - swarm.particleCoordinates.data[:,1]) < md.wedgeShallow, 
-                                    (1. - swarm.particleCoordinates.data[:,1]) > md.wedgeDeep)) [0] 
+    wedgeVariable.data[np.logical_and(sd<(-1.*nmd.faultThickness),sd>-1.*nmd.wedgeThickness)] = 1
+    mask = np.where(np.logical_or((1. - swarm.particleCoordinates.data[:,1]) < nmd.wedgeShallow, 
+                                    (1. - swarm.particleCoordinates.data[:,1]) > nmd.wedgeDeep)) [0] 
     wedgeVariable.data[mask] = 0
 
     #And outside of the x lim
-    #mask2 = fCollection[0].swarm.particleCoordinates.data[:,1] > (1. - md.wedgeDeep)
+    #mask2 = fCollection[0].swarm.particleCoordinates.data[:,1] > (1. - nmd.wedgeDeep)
     #if mask2.sum():
     #    maxXWedge = np.max(fCollection[0].swarm.particleCoordinates.data[:,0][mask2]) + 2*ds
     #else:
     #    maxXWedge = mesh.maxCoord[0]
     
-    #md.faultThickness, md.wedgeThickness
+    #nmd.faultThickness, nmd.wedgeThickness
     
     #this relies on using the max fault depth as the max wedge depth.
     minmax_coordx = fn.view.min_max(fn.coord()[0])
@@ -795,7 +818,7 @@ def build_wedge_region():
         wedgeVariable.data[mask3 ] = 0
 
 
-# In[49]:
+# In[59]:
 
 
 #build this guy here so it has contains both 0s and 1s - 
@@ -804,7 +827,7 @@ def build_wedge_region():
 build_wedge_region()
 
 
-# In[50]:
+# In[60]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -815,7 +838,7 @@ build_wedge_region()
 #figProx.show()
 
 
-# In[51]:
+# In[61]:
 
 
 #figProx.save_database("test.gldb")
@@ -823,7 +846,13 @@ build_wedge_region()
 
 # ## Prescribed velocity
 
-# In[52]:
+# In[76]:
+
+
+#tm[4]
+
+
+# In[62]:
 
 
 def set_vel_return_nodes(time, maskFn):
@@ -851,7 +880,7 @@ def set_vel_return_nodes(time, maskFn):
     
 
 
-# In[53]:
+# In[71]:
 
 
 vXnodes = set_vel_return_nodes(0., velMaskFn)
@@ -883,8 +912,9 @@ vXnodes = set_vel_return_nodes(0., velMaskFn)
 # In[56]:
 
 
-projectorMeshTemp= uw.utils.MeshVariable_Projection( temperatureField, proxyTempVariable , type=0 )
-projectorMeshTemp.solve()
+if not cp.restart:
+    projectorMeshTemp= uw.utils.MeshVariable_Projection( temperatureField, proxyTempVariable , type=0 )
+    projectorMeshTemp.solve()
 
 
 # ## Boundary conditions
@@ -939,7 +969,7 @@ dirichTempBC = uw.conditions.DirichletCondition(     variable=temperatureField,
 
 
 ###If we want thermal ridges fixed
-temperatureField.data[rWalls.data] = ndp.potentialTemp_
+temperatureField.data[rWalls.data] = npd.potentialTemp_
 
 
 # In[62]:
@@ -947,11 +977,11 @@ temperatureField.data[rWalls.data] = ndp.potentialTemp_
 
 ## Reassert the tempBCS
 
-temperatureField.data[tWalls.data] = ndp.surfaceTemp_
-temperatureField.data[bWalls.data] = ndp.potentialTemp_
+temperatureField.data[tWalls.data] = npd.surfaceTemp_
+temperatureField.data[bWalls.data] = npd.potentialTemp_
 
 
-# ## Bouyancy
+# ## Buoyancy
 
 # In[63]:
 
@@ -960,7 +990,7 @@ temperatureFn = temperatureField
 
 
 # Now create a buoyancy force vector using the density and the vertical unit vector. 
-thermalDensityFn = md.buoyancyFac*params.rayleighNumber*(1. - temperatureFn)
+thermalDensityFn = nmd.buoyancyFac*params.rayleighNumber*(1. - temperatureFn)
 
 gravity = ( 0.0, -1.0 )
 
@@ -982,7 +1012,7 @@ strainRate_2ndInvariant = fn.tensor.second_invariant(
 
 
 
-def safe_visc(func, viscmin=md.viscosityMin, viscmax=md.viscosityMax):
+def safe_visc(func, viscmin=nmd.viscosityMin, viscmax=nmd.viscosityMax):
     return fn.misc.max(viscmin, fn.misc.min(viscmax, func))
 
 
@@ -1002,9 +1032,9 @@ subZoneDistfn = tm.subZoneAbsDistFn(nonSpVal = 0.0, upper=False)
 
 
 faultHorizTaperFn  = usub.cosine_taper(subZoneDistfn, 
-                                  md.faultViscHorizTaperStart, md.faultViscHorizTaperWidth)
+                                  nmd.faultViscHorizTaperStart, nmd.faultViscHorizTaperWidth)
 faultDepthTaperFn = usub.cosine_taper(depthFn, 
-                                 md.faultViscDepthTaperStart, md.faultViscDepthTaperWidth)
+                                 nmd.faultViscDepthTaperStart, nmd.faultViscDepthTaperWidth)
 
 
 # In[67]:
@@ -1024,9 +1054,9 @@ faultDepthTaperFn = usub.cosine_taper(depthFn,
 
 #temperatureField, 
 
-#ndp.diffusionPreExp, ndp.diffusionVolumeDepth, ndp.diffusionEnergyDepth, ndp.surfaceTemp
-#(1./ndp.diffusionPreExp)
-#md.faultViscHorizTaperWidth*2900.
+#npd.diffusionPreExp, npd.diffusionVolumeDepth, npd.diffusionEnergyDepth, npd.surfaceTemp
+#(1./npd.diffusionPreExp)
+#nmd.faultViscHorizTaperWidth*2900.
 
 #5/4.
 
@@ -1036,35 +1066,36 @@ faultDepthTaperFn = usub.cosine_taper(depthFn,
 
 
 
-adiabaticCorrectFn = depthFn*ndp.adiabaticTempGrad
+adiabaticCorrectFn = depthFn*npd.adiabaticTempGrad
 dynamicPressureProxyDepthFn = pressureField/params.pressureDepthGrad
-druckerDepthFn = fn.misc.max(0.0, depthFn + md.druckerAlpha*(dynamicPressureProxyDepthFn))
+druckerDepthFn = fn.misc.max(0.0, depthFn + nmd.druckerAlpha*(dynamicPressureProxyDepthFn))
 
 #Diffusion Creep
-diffusionUM = (1./ndp.diffusionPreExp)*    fn.math.exp( ((ndp.diffusionEnergyDepth +                    (depthFn*ndp.diffusionVolumeDepth))/((temperatureFn+ adiabaticCorrectFn + ndp.surfaceTemp))))
+diffusionUM = (1./npd.diffusionPreExp)*    fn.math.exp( ((npd.diffusionEnergyDepth +                    (depthFn*npd.diffusionVolumeDepth))/((temperatureFn+ adiabaticCorrectFn + npd.surfaceTemp))))
 
 diffusionUM =     safe_visc(diffusionUM)
     
-diffusionLM = ndp.lowerMantleViscFac*(1./ndp.diffusionPreExp)*    fn.math.exp( ((ndp.diffusionEnergyDepth +                    (depthFn*ndp.diffusionVolumeDepth))/((temperatureFn+ adiabaticCorrectFn + ndp.surfaceTemp))))
+diffusionLM = npd.lowerMantleViscFac*(1./npd.diffusionPreExp)*    fn.math.exp( ((npd.diffusionEnergyDepth +                    (depthFn*npd.diffusionVolumeDepth))/((temperatureFn+ adiabaticCorrectFn + npd.surfaceTemp))))
 
 #diffusionLM =     safe_visc(diffusionLM)
 
 
-transitionZoneTaperFn = usub.cosine_taper(depthFn, md.lowerMantleDepth - 0.5*md.lowerMantleTransWidth , md.lowerMantleTransWidth )
+transitionZoneTaperFn = usub.cosine_taper(depthFn, nmd.lowerMantleDepth - 0.5*nmd.lowerMantleTransWidth , 
+                                          nmd.lowerMantleTransWidth )
 
 
 mantleCreep = diffusionUM*(1. - transitionZoneTaperFn) + transitionZoneTaperFn*diffusionLM
 
 #Define the mantle Plasticity
-ys =  ndp.cohesionMantle + (druckerDepthFn*ndp.frictionMantleDepth)
-ysf = fn.misc.min(ys, ndp.yieldStressMax)
+ys =  npd.cohesionMantle + (druckerDepthFn*npd.frictionMantleDepth)
+ysf = fn.misc.min(ys, npd.yieldStressMax)
 yielding = ysf/(2.*(strainRate_2ndInvariant) + 1e-15) 
 
 mantleRheologyFn =  safe_visc(mantleCreep*yielding/(mantleCreep + yielding), 
-                              viscmin=md.viscosityMin, viscmax=md.viscosityMax)
+                              viscmin=nmd.viscosityMin, viscmax=nmd.viscosityMax)
 
 
-faultViscosityFn = ndp.viscosityFault
+faultViscosityFn = npd.viscosityFault
 
 faultRheologyFn =  faultViscosityFn*(1. - faultDepthTaperFn) +                         faultDepthTaperFn*mantleRheologyFn + faultHorizTaperFn*mantleRheologyFn
 
@@ -1099,24 +1130,6 @@ mantleRheologyFn_ = fn.branching.map( fn_key = wedgeVariable,
 viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                              mapping = {0:mantleRheologyFn_,
                                         2:faultRheologyFn} )
-
-
-# In[73]:
-
-
-#md.wedgeViscosity
-
-
-# In[74]:
-
-
-#fig.save_database('test.gldb')
-
-
-# In[75]:
-
-
-#ndimlz(1.0*ur.megayear)
 
 
 # ## Stokes
@@ -1172,8 +1185,9 @@ solver.options.scr.ksp_rtol = 1.0e-4
 # In[79]:
 
 
-solver.solve(nonLinearIterate=True, nonLinearTolerance=md.nltol, callback_post_solve = pressure_calibrate)
-solver.print_stats()
+if not cp.restart:
+    solver.solve(nonLinearIterate=True, nonLinearTolerance=nmd.nltol, callback_post_solve = pressure_calibrate)
+    solver.print_stats()
 
 
 # In[80]:
@@ -1191,7 +1205,7 @@ advDiff = uw.systems.AdvectionDiffusion( phiField       = temperatureFn,
                                          phiDotField    = temperatureDotField, 
                                          velocityField  = velocityField,
                                          fn_sourceTerm    = 0.0,
-                                         fn_diffusivity = ndp.refDiffusivity, 
+                                         fn_diffusivity = npd.refDiffusivity, 
                                          #conditions     = [neumannTempBC, dirichTempBC] )
                                          conditions     = [ dirichTempBC] )
 
@@ -1209,47 +1223,50 @@ advector = uw.systems.SwarmAdvector( swarm=swarm, velocityField=velocityField, o
 
 population_control = uw.swarm.PopulationControl(swarm, deleteThreshold=0.006, 
                                                 splitThreshold=0.25,maxDeletions=1, maxSplits=3, aggressive=True,
-                                                aggressiveThreshold=0.9, particlesPerCell=int(md.ppc))
+                                                aggressiveThreshold=0.9, particlesPerCell=int(nmd.ppc))
 
 
 # ## Set up a midplane swarm
 
-# In[180]:
+# In[79]:
 
 
 #midplane.swarm.particleCoordinates.data
+#midPlaneDepth
 
 
-# In[83]:
+# In[80]:
 
 
 spId = 2
-midPlaneDepth = ndimlz(20.*ur.kilometer + 0.5*(modelDict_dim.faultThickness))
+midPlaneDepth = ndimlz(20.*ur.kilometer + 0.5*(md.faultThickness))
 
-midPlaneXs = np.arange(tm.get_boundaries(2)[0] + 2.*ds, tm.get_boundaries(2)[1] - 2.*ds, ds)
-midPlaneYs = np.ones(len(midPlaneXs)) * (1. - midPlaneDepth)
-midplane = usub.interface2D(mesh, velocityField, midPlaneXs, midPlaneYs,1.0, 2)
+#*************CHECKPOINT-BLOCK**************#
+if not cp.restart:
+    midPlaneXs = np.arange(tm.get_boundaries(spId)[0] + 2.*ds, tm.get_boundaries(spId)[1] - 2.*ds, ds)
+    midPlaneYs = np.ones(len(midPlaneXs)) * (1. - midPlaneDepth)
+    midplane = usub.interface2D(mesh, velocityField, midPlaneXs, midPlaneYs,1.0, spId)
+    
+
+else:
+    midplane = usub.interface2D(mesh, velocityField, [], [], 1.0, spId)
+    midplane.swarm.load(cp.loadpath + '/midplane.h5')
+#*************CHECKPOINT-BLOCK**************#
+
+cp.addObject(midplane.swarm, 'midplane')
 
 mCollection = usub.interface_collection([])
 mCollection.append(midplane)
 
 
+#no need for checkpoint
 allxs = np.arange(mesh.minCoord[0], mesh.maxCoord[0], ds )[:-1]
 allys = (1. - midPlaneDepth)*np.ones(allxs.shape)
-
 midPlaneMasterSwarm = uw.swarm.Swarm( mesh=mesh )
 dummy =  midPlaneMasterSwarm.add_particles_with_coordinates(np.column_stack((allxs, allys)))
 del allxs
 del allys
 
-
-
-# In[84]:
-
-
-#testFn = tm.xFn > -10.
-#dummy = pop_or_perish(tm, mCollection, midPlaneMasterSwarm, faultAddFn , ds)
-#dummy = remove_faults_from_boundaries(tm, mCollection, testFn )
 
 
 # In[85]:
@@ -1433,8 +1450,8 @@ def update_faults():
     for f in fCollection:
         
         #Remove particles below a specified depth
-        #depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - md.faultDestroyDepth)
-        depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - md.wedgeDeep)
+        #depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - nmd.faultDestroyDepth)
+        depthMask = f.swarm.particleCoordinates.data[:,1] <         (1. - nmd.wedgeDeep)
         with f.swarm.deform_swarm():
             f.swarm.particleCoordinates.data[depthMask] = (9999999., 9999999.)
         
@@ -1494,7 +1511,7 @@ def update_swarm():
                                 maxDistanceFn=fn.misc.constant(2.))
         
     #A simple depth cutoff for proximity
-    depthMask = swarm.particleCoordinates.data[:,1] < (1. - md.faultDestroyDepth)
+    depthMask = swarm.particleCoordinates.data[:,1] < (1. - nmd.faultDestroyDepth)
     proximityVariable.data[depthMask] = 0
     
 
@@ -1554,7 +1571,7 @@ def update_mask_fns():
     faultAddFn =  fn.misc.constant(True)
 
     velMask1 = tm.t2f(tm.ridge_mask_fn(dist=ndimlz(25*ur.km)))
-    velMask2= tm.t2f(tm.subduction_mask_fn(dist=md.faultViscHorizTaperStart))
+    velMask2= tm.t2f(tm.subduction_mask_fn(dist=nmd.faultViscHorizTaperStart))
     velMaskFn = operator.and_( velMask1,  velMask2)
 
 
@@ -1563,7 +1580,7 @@ def update_mask_fns():
     subZoneDistfn = tm.subZoneAbsDistFn(nonSpVal=0.0, upper=False)
     
     faultHorizTaperFn  = usub.cosine_taper(subZoneDistfn, 
-                                  md.faultViscHorizTaperStart, md.faultViscHorizTaperWidth)
+                                  nmd.faultViscHorizTaperStart, nmd.faultViscHorizTaperWidth)
     
     return faultRmfn, faultAddFn, velMaskFn, faultHorizTaperFn
 
@@ -1705,21 +1722,21 @@ def update_slab_parallel_sr():
     sigSSMesh.data[:,0] = 2.*resolvedSR*viscMesh.data[:,0]
     eSSMesh.data[:,0] = resolvedSR
     #mask values above the maxYieldStress
-    #ymask = np.abs(sigSSMesh.data[:,0] ) > ndp.yieldStressMax
-    #sigSSMesh.data[:,0][mask] = ndp.yieldStressMax
+    #ymask = np.abs(sigSSMesh.data[:,0] ) > npd.yieldStressMax
+    #sigSSMesh.data[:,0][mask] = npd.yieldStressMax
     
-    mask1 = sigSSMesh.data[:,0]  > ndp.yieldStressMax
-    sigSSMesh.data[:,0][mask1] = ndp.yieldStressMax
-    mask2 = sigSSMesh.data[:,0]  < -1.*ndp.yieldStressMax
-    sigSSMesh.data[:,0][mask2] = -1.*ndp.yieldStressMax
+    mask1 = sigSSMesh.data[:,0]  > npd.yieldStressMax
+    sigSSMesh.data[:,0][mask1] = npd.yieldStressMax
+    mask2 = sigSSMesh.data[:,0]  < -1.*npd.yieldStressMax
+    sigSSMesh.data[:,0][mask2] = -1.*npd.yieldStressMax
 
 
 # In[175]:
 
 
 #update_slab_parallel_sr()
-#mask = np.abs(sigSSMesh.data[:,0] ) > ndp.yieldStressMax
-#sigSSMesh.data[:,0][mask] = ndp.yieldStressMax
+#mask = np.abs(sigSSMesh.data[:,0] ) > npd.yieldStressMax
+#sigSSMesh.data[:,0][mask] = npd.yieldStressMax
 #params.stressScale
 
 
@@ -1769,6 +1786,14 @@ def xdmfs_update():
     viscMesh.xdmf(xdmfPath+ "visc_" + str(step), visc , 'visc', mh, 'mesh', modeltime=time)
     sigIIMesh.xdmf(xdmfPath+ "sigII_" + str(step), sigII, 'sigII', mh, 'mesh', modeltime=time)
     eSSMesh.xdmf(xdmfPath+ "eSS_" + str(step), eSS, 'eSS', mh, 'mesh', modeltime=time)
+
+
+# In[83]:
+
+
+def write_checkpoint(step_, time_):
+    cp.saveObjs(step_, time_)
+    cp.saveDicts(step_, time_)
 
 
 # In[242]:
@@ -1854,10 +1879,10 @@ for f in fCollection:
 # In[ ]:
 
 
-time = 0.  # Initial time
-step = 0 
+time = cp.time()  # Initial time
+step = cp.step()   # Initial timestep
 maxSteps = 2000      # Maximum timesteps 
-steps_output = 25   # output every N timesteps
+steps_output = 10   # output every N timesteps
 swarm_update = 10   # output every N timesteps
 faults_update = 10
 dt_model = 0.
@@ -1870,10 +1895,18 @@ update_values()
 # In[ ]:
 
 
+#checkpoint at time zero
+if not cp.restart:
+    write_checkpoint(step, time)
+
+
+# In[ ]:
+
+
 while time < tm.times[-1] and step < maxSteps:
     
     # Solve non linear Stokes system
-    solver.solve(nonLinearIterate=True, nonLinearTolerance=md.nltol, callback_post_solve = pressure_calibrate)
+    solver.solve(nonLinearIterate=True, nonLinearTolerance=nmd.nltol, callback_post_solve = pressure_calibrate)
     
     dt = advDiff.get_max_dt()
     advDiff.integrate(dt)
@@ -1949,10 +1982,10 @@ while time < tm.times[-1] and step < maxSteps:
     ##Wedge stuff 
     
     
-    if time > md.turnOnWedge:
+    if time > nmd.turnOnWedge:
         
         faultDepthTaperFn = usub.cosine_taper(depthFn,
-                                 0.75*md.faultViscDepthTaperStart, md.faultViscDepthTaperWidth)
+                                 0.75*nmd.faultViscDepthTaperStart, nmd.faultViscDepthTaperWidth)
 
         
         #toggle the rheology. 
@@ -1960,7 +1993,7 @@ while time < tm.times[-1] and step < maxSteps:
         if wedgeOn == False:
             mantleRheologyFn_ = fn.branching.map( fn_key = wedgeVariable,
                                          mapping = {0:mantleRheologyFn,
-                                                    1:md.wedgeViscosity} )
+                                                    1:nmd.wedgeViscosity} )
        
             viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                              mapping = {0:mantleRheologyFn_,
@@ -1974,7 +2007,12 @@ while time < tm.times[-1] and step < maxSteps:
         build_wedge_region()
 
 
-    print 'wedge on is: {}'.format(wedgeOn)    
+    print 'wedge on is: {}'.format(wedgeOn)
+    
+    
+    #checkpoint
+    if step % nmd.checkpointEvery == 0:
+        write_checkpoint(step, time)
     
     
     if uw.rank()==0:
