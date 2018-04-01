@@ -10,7 +10,7 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[91]:
+# In[1]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -27,7 +27,7 @@ except:
     pass
 
 
-# In[92]:
+# In[2]:
 
 
 import os
@@ -44,7 +44,7 @@ import pint
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[93]:
+# In[3]:
 
 
 import UWsubduction as usub
@@ -52,9 +52,10 @@ import UWsubduction.params as params
 import UWsubduction.utils as utils
 from UWsubduction.analysis import eig2d
 from UWsubduction.utils import checkpoint
+import unsupported.scaling as sca
 
 
-# In[94]:
+# In[4]:
 
 
 #load in parent stuff
@@ -64,13 +65,13 @@ from UWsubduction.utils import checkpoint
 #from unsupported_dan.UWsubduction.model import *
 
 
-# In[95]:
+# In[5]:
 
 
 #TectModel
 
 
-# In[96]:
+# In[6]:
 
 
 from unsupported_dan.utilities.interpolation import nn_evaluation
@@ -78,7 +79,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[97]:
+# In[7]:
 
 
 ############
@@ -135,7 +136,7 @@ if uw.rank()==0:
 uw.barrier() #Barrier here so no procs run the check in the next cell too early
 
 
-# In[98]:
+# In[8]:
 
 
 #*************CHECKPOINT-BLOCK**************#
@@ -154,14 +155,13 @@ if cp.restart:
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[99]:
+# In[9]:
 
 
-#from unsupported_dan.UWsubduction.minimal_example import UnitRegistry
-u = params.UnitRegistry
+u =  sca.UnitRegistry
 
 
-# In[100]:
+# In[10]:
 
 
 #pd refers to dimensional paramters
@@ -197,7 +197,7 @@ pd.lowerMantleViscFac = u.Quantity(20.0)
 
 
 
-# In[101]:
+# In[11]:
 
 
 md = edict({})
@@ -240,11 +240,11 @@ md.wedgeDeep=150*u.km
 md.wedgeThickness = 200*u.km
 md.turnOnWedge = 20*u.megayears
 md.turnOffVels = False
-md.checkpointEvery = 25
+md.checkpointEvery = 100
 md.restartParams = True #read in saved checkpoint md/pd 
 
 
-# In[102]:
+# In[12]:
 
 
 #first check for commandLineArgs:
@@ -256,34 +256,51 @@ utils.easy_args(sysArgs, md)
 #mddim = md
 
 
-# In[103]:
+# In[13]:
 
 
+#instead of importing from the params submodule, we'll explicity set the scaling values
+KL = pd.refLength
+KT = pd.potentialTemp - pd.surfaceTemp
+Kt = KL**2/pd.refDiffusivity
+KM = pd.refViscosity * KL * Kt
 
+sca.scaling["[length]"]      = KL.to_base_units()
+sca.scaling["[temperature]"] = KT.to_base_units()
+sca.scaling["[mass]"]        = KM.to_base_units()
+sca.scaling["[time]"] =        Kt.to_base_units()
 
-#define some more concise names
-sca = params.sub_scaling
-ndimlz = sca.nonDimensionalize
 
 
 #build the dimensionless paramter / model dictionaries
 npd = params.build_nondim_dict(pd  , sca)   
 nmd = params.build_nondim_dict(md  , sca)
-ur = u
+ur = u #for some reason!
+ndimlz = sca.nonDimensionalize
 
 assert ndimlz(pd.refLength) == 1.0
 
 
+#build dimensional terms, and scaling values
+#Important to remember the to_base_units conversion here
+rayleighNumber = ((pd.refExpansivity*pd.refDensity*pd.refGravity*(pd.potentialTemp - pd.surfaceTemp)*pd.refLength**3).to_base_units()                   /(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
 
-# In[104]:
+stressScale = ((pd.refDiffusivity*pd.refViscosity)/pd.refLength**2).magnitude
+pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units()/(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
+
+
+# In[14]:
 
 
 # changes to base params: (These will keep changing if the notebook is run again without restarting!)
 #nmd.faultThickness *= 1.5 #15 km
 #nmd.res = 48
+#nmd.faultThickness
+
+5*(1.25/2)
 
 
-# In[105]:
+# In[15]:
 
 
 #*************CHECKPOINT-BLOCK**************#
@@ -292,7 +309,7 @@ assert ndimlz(pd.refLength) == 1.0
 pint.set_application_registry(ur) #https://github.com/hgrecco/pint/issues/146
 
 #if restart, attempt to read in saved dicts. 
-if cp.restart :
+if cp.restart:
     #try:
     with open(os.path.join(cp.loadpath, 'pd.pkl'), 'rb') as fp:
         pd = pickle.load(fp)
@@ -313,7 +330,7 @@ cp.addDict(md, 'md')
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[106]:
+# In[16]:
 
 
 #(npd.rightLim - npd.leftLim)/npd.depth
@@ -322,7 +339,7 @@ cp.addDict(md, 'md')
 #nmd.depth
 
 
-# In[107]:
+# In[17]:
 
 
 yres = int(nmd.res)
@@ -350,7 +367,7 @@ temperatureField.data[:] = 0.
 temperatureDotField.data[:] = 0.
 
 
-# In[108]:
+# In[18]:
 
 
 #mesh.reset() #call to reset mesh nodes to original locations
@@ -374,7 +391,7 @@ if nmd.refineVert:
         mesh.data[:,1] = mesh.data[:,1] + 1.0
 
 
-# In[109]:
+# In[19]:
 
 
 #*************CHECKPOINT-BLOCK**************#
@@ -393,7 +410,7 @@ if cp.restart:
 
 # ## Build plate model
 
-# In[110]:
+# In[20]:
 
 
 endTime = ndimlz(35*ur.megayear) 
@@ -401,7 +418,7 @@ refVel = ndimlz(2*ur.cm/ur.year)
 plateModelDt = ndimlz(0.1*ur.megayear)
 
 
-# In[111]:
+# In[21]:
 
 
 #location of plate boundaries
@@ -413,7 +430,7 @@ subLoc = ridgeLoc  + ndimlz(2100.*ur.kilometer)
 vp1= ndimlz(0.*ur.centimeter/ur.year )
 
 vp3start= ndimlz(-3.*ur.centimeter/ur.year )
-vp3end= ndimlz(-1.0*ur.centimeter/ur.year )
+vp3end= ndimlz(-1.5*ur.centimeter/ur.year )
 
 vb12= ndimlz(1.5*ur.centimeter/ur.year )
 
@@ -423,7 +440,7 @@ vp2end= ndimlz(2.*ur.centimeter/ur.year )
 
 
 
-# In[112]:
+# In[22]:
 
 
 #build tectonic model
@@ -468,14 +485,14 @@ cp.addDict(tmDict, 'tmDict')
 #*************CHECKPOINT-BLOCK**************#
 
 
-# In[114]:
+# In[23]:
 
 
 #tmDict = nx.to_dict_of_dicts(tm)
 #tmDict[1].keys()
 
 
-# In[117]:
+# In[24]:
 
 
 #tm2 = usub.TectonicModel(mesh, 0, endTime, plateModelDt)#
@@ -487,7 +504,7 @@ cp.addDict(tmDict, 'tmDict')
 
 # ## Build plate age / temperature Fns
 
-# In[118]:
+# In[25]:
 
 
 pIdFn = tm.plate_id_fn()
@@ -501,7 +518,7 @@ fnAge_map = fn.branching.map(fn_key = pIdFn ,
 #fig.show()
 
 
-# In[119]:
+# In[26]:
 
 
 coordinate = fn.input()
@@ -516,13 +533,13 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, npd.pote
 
 
 
-# In[120]:
+# In[27]:
 
 
 #np.math.sqrt(25.)/np.math.sqrt(15.)
 
 
-# In[121]:
+# In[28]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -532,7 +549,7 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, npd.pote
 
 # ## Make swarm and Swarm Vars
 
-# In[122]:
+# In[29]:
 
 
 #swarm = uw.swarm.Swarm(mesh=mesh, particleEscape=True)
@@ -541,7 +558,7 @@ plateTempProxFn = fn.branching.conditional( ((depthFn > platethickness, npd.pote
 #swarm.populate_using_layout( layout=layout ) # Now use it to populate.
 
 
-# In[123]:
+# In[30]:
 
 
 #*************CHECKPOINT-BLOCK**************#
@@ -581,7 +598,7 @@ wedgeVariable.data[:] = 0
 
 # ## Create tmUwMap
 
-# In[124]:
+# In[31]:
 
 
 #Now we have built are primary FEM / Swarm objects, we collect some of these in a dictionary,
@@ -595,7 +612,7 @@ tmUwMap = usub.tm_uw_map([], velocityField, swarm,
 # 
 # * For more information see, `UWsubduction/Background/interface2D`
 
-# In[125]:
+# In[32]:
 
 
 def circGradientFn(S):
@@ -623,7 +640,7 @@ def circGradientFn3(S):
     
 
 
-# In[126]:
+# In[33]:
 
 
 #define fault particle spacing
@@ -665,7 +682,7 @@ else:
 #*************CHECKPOINT-BLOCK**************#
 
 
-# In[127]:
+# In[34]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -680,7 +697,7 @@ else:
 # 
 # In this section we setup some functions to help manage the spatial distribution of the subduction interface
 
-# In[128]:
+# In[35]:
 
 
 # Setup a swarm to define the replacment positions
@@ -727,7 +744,7 @@ dummy = usub.pop_or_perish(tm, fCollection, faultMasterSwarm, faultAddFn , ds)
 dummy = usub.remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 
 
-# In[129]:
+# In[36]:
 
 
 #fig = glucifer.Figure(figsize=(600, 300))
@@ -741,22 +758,17 @@ dummy = usub.remove_faults_from_boundaries(tm, fCollection, faultRmfn )
 # ## Proximity
 # 
 # 
-
-# In[130]:
-
-
 for f in fCollection:
     f.rebuild()
-    f.set_proximity_director(swarm, proximityVariable, searchFac = 2., locFac=1.0)
+    f.set_proximity_director(swarm, proximityVariable, searchFac = 2., locFac=1.0,
+                                maxDistanceFn=fn.misc.constant(2.))
+# In[39]:
 
 
-# In[131]:
+#update_faults() 
 
 
-#update_faults()
-
-
-# In[132]:
+# In[41]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -990,7 +1002,7 @@ temperatureFn = temperatureField
 
 
 # Now create a buoyancy force vector using the density and the vertical unit vector. 
-thermalDensityFn = nmd.buoyancyFac*params.rayleighNumber*(1. - temperatureFn)
+thermalDensityFn = nmd.buoyancyFac*rayleighNumber*(1. - temperatureFn)
 
 gravity = ( 0.0, -1.0 )
 
@@ -1067,7 +1079,7 @@ faultDepthTaperFn = usub.cosine_taper(depthFn,
 
 
 adiabaticCorrectFn = depthFn*npd.adiabaticTempGrad
-dynamicPressureProxyDepthFn = pressureField/params.pressureDepthGrad
+dynamicPressureProxyDepthFn = pressureField/pressureDepthGrad
 druckerDepthFn = fn.misc.max(0.0, depthFn + nmd.druckerAlpha*(dynamicPressureProxyDepthFn))
 
 #Diffusion Creep
@@ -1098,14 +1110,6 @@ mantleRheologyFn =  safe_visc(mantleCreep*yielding/(mantleCreep + yielding),
 faultViscosityFn = npd.viscosityFault
 
 faultRheologyFn =  faultViscosityFn*(1. - faultDepthTaperFn) +                         faultDepthTaperFn*mantleRheologyFn + faultHorizTaperFn*mantleRheologyFn
-
-
-# In[70]:
-
-
-#(md.lowerMantleDepth - 0.5*md.lowerMantleTransWidth )*2900.0
-
-#params.pressureDepthGrad
 
 
 # In[71]:
@@ -1737,7 +1741,7 @@ def update_slab_parallel_sr():
 #update_slab_parallel_sr()
 #mask = np.abs(sigSSMesh.data[:,0] ) > npd.yieldStressMax
 #sigSSMesh.data[:,0][mask] = npd.yieldStressMax
-#params.stressScale
+#stressScale
 
 
 # In[240]:
@@ -1882,7 +1886,7 @@ for f in fCollection:
 time = cp.time()  # Initial time
 step = cp.step()   # Initial timestep
 maxSteps = 2000      # Maximum timesteps 
-steps_output = 10   # output every N timesteps
+steps_output = 25   # output every N timesteps
 swarm_update = 10   # output every N timesteps
 faults_update = 10
 dt_model = 0.
