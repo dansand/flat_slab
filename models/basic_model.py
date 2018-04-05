@@ -10,6 +10,12 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
+# In[4]:
+
+
+#22/20.
+
+
 # In[1]:
 
 
@@ -44,7 +50,7 @@ import pint
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[3]:
+# In[44]:
 
 
 import UWsubduction as usub
@@ -52,7 +58,10 @@ import UWsubduction.params as params
 import UWsubduction.utils as utils
 from UWsubduction.analysis import eig2d
 from UWsubduction.utils import checkpoint
-import unsupported.scaling as sca
+try:
+    import unsupported.scaling as sca
+except:
+    import unsupported.geodynamics.scaling as sca
 
 
 # In[4]:
@@ -63,12 +72,6 @@ import unsupported.scaling as sca
 #import nb_load_stuff
 #from tectModelClass import *
 #from unsupported_dan.UWsubduction.model import *
-
-
-# In[5]:
-
-
-#TectModel
 
 
 # In[6]:
@@ -193,7 +196,7 @@ pd.diffusionVolumeDepth=5e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.j
 pd.viscosityFault = 2e19*u.pascal  * u.second
 pd.adiabaticTempGrad = (pd.refExpansivity*pd.refGravity*pd.potentialTemp)/pd.specificHeat
 pd.yieldStressMax=200*u.megapascal
-pd.lowerMantleViscFac = u.Quantity(20.0)
+pd.lowerMantleViscFac = u.Quantity(5.0)
 
 
 
@@ -219,7 +222,7 @@ md.subZoneLoc=-100*u.km                                           #X position of
 md.slabInitMaxDepth=150*u.km
 md.radiusOfCurv = 200.*u.km                                        #radius of curvature
 md.slabAge=20.*u.megayears                                      #age of subduction plate at trench
-md.opAgeAtTrench=15.*u.megayears                                        #age of op
+md.opAgeAtTrench=10.*u.megayears                                        #age of op
 #numerical and computation params
 md.res=48
 md.ppc=25                                                         #particles per cell
@@ -289,15 +292,14 @@ stressScale = ((pd.refDiffusivity*pd.refViscosity)/pd.refLength**2).magnitude
 pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units()/(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
 
 
-# In[14]:
+# In[5]:
 
 
 # changes to base params: (These will keep changing if the notebook is run again without restarting!)
 #nmd.faultThickness *= 1.5 #15 km
 #nmd.res = 48
 #nmd.faultThickness
-
-5*(1.25/2)
+#5*(1.25/2)
 
 
 # In[15]:
@@ -423,20 +425,20 @@ plateModelDt = ndimlz(0.1*ur.megayear)
 
 #location of plate boundaries
 
-ridgeLoc = -0.7
-subLoc = ridgeLoc  + ndimlz(2100.*ur.kilometer)
+ridgeLoc = -0.6
+subLoc = ridgeLoc  + ndimlz(1800.*ur.kilometer)
 
 #velocities of the plates (1 - 3) as well as the plate boundary (1,2)
 vp1= ndimlz(0.*ur.centimeter/ur.year )
 
-vp3start= ndimlz(-3.*ur.centimeter/ur.year )
-vp3end= ndimlz(-1.5*ur.centimeter/ur.year )
+vp3start= ndimlz(-2.*ur.centimeter/ur.year )
+vp3end= ndimlz(-2.*ur.centimeter/ur.year )
 
-vb12= ndimlz(1.5*ur.centimeter/ur.year )
+vb12= ndimlz(2.*ur.centimeter/ur.year )
 
 
-vp2start= ndimlz(8.*ur.centimeter/ur.year )
-vp2end= ndimlz(2.*ur.centimeter/ur.year )
+vp2start= ndimlz(9.*ur.centimeter/ur.year )
+vp2end= ndimlz(3.*ur.centimeter/ur.year )
 
 
 
@@ -768,7 +770,7 @@ for f in fCollection:
 #update_faults() 
 
 
-# In[41]:
+# In[43]:
 
 
 #figProx = glucifer.Figure(figsize=(960,300) )
@@ -1473,7 +1475,7 @@ def update_faults():
 # In[16]:
 
 
-markerDestroyDepth = ndimlz(500*ur.kilometer)
+markerDestroyDepth = ndimlz(350*ur.kilometer)
 def update_markers():
         
     #order is very important here
@@ -1885,7 +1887,7 @@ for f in fCollection:
 
 time = cp.time()  # Initial time
 step = cp.step()   # Initial timestep
-maxSteps = 2000      # Maximum timesteps 
+maxSteps = 10000      # Maximum timesteps 
 steps_output = 25   # output every N timesteps
 swarm_update = 10   # output every N timesteps
 faults_update = 10
@@ -1959,23 +1961,23 @@ while time < tm.times[-1] and step < maxSteps:
         #Important to set the timestep for the store object here or will overwrite previous step
         
         #also update this guy for viz
-        viscSwarmVar.data[:] = viscosityMapFn.evaluate(swarm)
-        maskFnVar1.data[:] = velMaskFn.evaluate(mesh)
-        maskFnVar2.data[:] = faultRmfn.evaluate(mesh)
-        maskFnVar3.data[:] = plate_id_fn.evaluate(mesh)
+        #viscSwarmVar.data[:] = viscosityMapFn.evaluate(swarm)
+        #maskFnVar1.data[:] = velMaskFn.evaluate(mesh)
+        #maskFnVar2.data[:] = faultRmfn.evaluate(mesh)
+        #maskFnVar3.data[:] = plate_id_fn.evaluate(mesh)
         
-        store1.step = step
-        store2.step = step
-        store3.step = step
-        figTemp.save(    outputPath + "temp"    + str(step).zfill(4))
+        #store1.step = step
+        #store2.step = step
+        #store3.step = step
+        #figTemp.save(    outputPath + "temp"    + str(step).zfill(4))
         #figProx.save(    outputPath + "prox"    + str(step).zfill(4))
-        figVisc.save(    outputPath + "visc"    + str(step).zfill(4))
-        figMask.save(    outputPath + "mask"    + str(step).zfill(4))
+        #figVisc.save(    outputPath + "visc"    + str(step).zfill(4))
+        #figMask.save(    outputPath + "mask"    + str(step).zfill(4))
         #figVel.save(    outputPath + "vel"    + str(step).zfill(4))
         
         #save out the files
         
-        update_gravity()
+        #update_gravity()
         files_update()
         
         #XDMFS
