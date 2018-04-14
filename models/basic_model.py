@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[4]:
+# In[1]:
 
 
 #22/20.
 
 
-# In[1]:
+# In[2]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -33,7 +33,7 @@ except:
     pass
 
 
-# In[2]:
+# In[3]:
 
 
 import os
@@ -50,7 +50,7 @@ import pint
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[44]:
+# In[4]:
 
 
 import UWsubduction as usub
@@ -64,7 +64,7 @@ except:
     import unsupported.geodynamics.scaling as sca
 
 
-# In[4]:
+# In[5]:
 
 
 #load in parent stuff
@@ -292,7 +292,7 @@ stressScale = ((pd.refDiffusivity*pd.refViscosity)/pd.refLength**2).magnitude
 pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units()/(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
 
 
-# In[5]:
+# In[15]:
 
 
 # changes to base params: (These will keep changing if the notebook is run again without restarting!)
@@ -300,6 +300,7 @@ pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units
 #nmd.res = 48
 #nmd.faultThickness
 #5*(1.25/2)
+stressScale
 
 
 # In[15]:
