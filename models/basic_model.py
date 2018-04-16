@@ -1155,6 +1155,14 @@ viscosityMapFn = fn.branching.map( fn_key = proximityVariable,
                                         2:faultRheologyFn} )
 
 
+# In[ ]:
+
+
+###
+yieldingCheckFn = fn.branching.conditional( ((2.*mantleRheologyFn*strainRate_2ndInvariant > 0.95*ysf, 1.0), 
+                                           (True,                      0.)  ))
+
+
 # ## Stokes
 
 # In[230]:
@@ -1662,12 +1670,13 @@ sigXXMesh =  uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
 sigIIMesh =  uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
 eig1       = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=2 )
 eIIMesh = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
+yieldingMesh = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1 )
 
 viscMesh.data[:] = 0.
 sigXXMesh.data[:] = 0.
 sigIIMesh.data[:] = 0.
 eig1.data[:] = (0., 0.)
-
+yieldingMesh.data[:] = 0.
 
 ##############this one used projection
 sigIIMesh2       = uw.mesh.MeshVariable( mesh=mesh,         nodeDofCount=1) 
@@ -1710,6 +1719,9 @@ def swarm_to_mesh_update():
     
     #also this guy
     eIIMesh.data[:] = strainRate_2ndInvariant.evaluate(mesh)
+    
+    #also this guy
+    yieldingMesh.data[:] = yieldingCheckFn.evaluate(mesh)
 
 
 # In[262]:
@@ -1822,6 +1834,7 @@ def xdmfs_update():
     eSS = eSSMesh.save(xdmfPath + "eSS_" + str(step) + ".h5")
     eII = eIIMesh.save(xdmfPath + "eII_" + str(step) + ".h5")
     sigII2 = sigIIMesh2.save(xdmfPath + "sigII2_" + str(step) + ".h5")
+    yieldH = yieldingMesh.save(xdmfPath + "yield_" + str(step) + ".h5")
 
     
     
@@ -1836,7 +1849,7 @@ def xdmfs_update():
     eSSMesh.xdmf(xdmfPath+ "eSS_" + str(step), eSS, 'eSS', mh, 'mesh', modeltime=time)
     eIIMesh.xdmf(xdmfPath+ "eII_" + str(step), eII, 'eII', mh, 'mesh', modeltime=time)
     sigIIMesh2.xdmf(xdmfPath+ "sigII2_" + str(step), sigII2, 'sigII2', mh, 'mesh', modeltime=time)
-
+    yieldingMesh.xdmf(xdmfPath+ "yield_" + str(step), yieldH, 'yield', mh, 'mesh', modeltime=time)
 
 
 # In[83]:
