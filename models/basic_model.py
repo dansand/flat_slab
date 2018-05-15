@@ -164,7 +164,7 @@ if cp.restart:
 u =  sca.UnitRegistry
 
 
-# In[10]:
+# In[49]:
 
 
 #pd refers to dimensional paramters
@@ -188,34 +188,28 @@ pd.surfaceTemp_ = pd.surfaceTemp - pd.surfaceTemp
 pd.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
 pd.frictionMantle = u.Quantity(0.1)                                           #mantle friction coefficient in Byerlee law (tan(phi))
 pd.frictionMantleDepth = pd.frictionMantle*pd.refDensity*pd.refGravity
-pd.diffusionPreExp = 6.29e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
-pd.diffusionEnergy = 3.18e5*u.joule/(u.mol)
-pd.diffusionEnergyDepth = 3.18e5*u.joule/(u.mol*pd.gasConstant)
+pd.diffusionPreExp = 6.19e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
+pd.diffusionEnergy = 3.1846e5*u.joule/(u.mol)
+pd.diffusionEnergyDepth = 3.1846e5*u.joule/(u.mol*pd.gasConstant)
 pd.diffusionVolume=5.31e-6*u.meter**3/(u.mol)
 pd.diffusionVolumeDepth=5.31e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.joule/(u.mol*pd.gasConstant*u.meter)
 
 
 
 pd.viscosityFault = 2e19*u.pascal  * u.second
-pd.adiabaticTempGrad = 0.00037
+pd.adiabaticTempGrad = 0.00036985*u.kelvin/u.meter
 pd.yieldStressMax=200*u.megapascal
 pd.lowerMantleViscFac = u.Quantity(5.0)
 
 
 
-# In[11]:
-
-
-#2*0.45
-
-
-# In[12]:
+# In[51]:
 
 
 #pd.adiabaticTempGrad 
 
 
-# In[274]:
+# In[52]:
 
 
 md = edict({})
@@ -262,7 +256,7 @@ md.checkpointEvery = 100
 md.restartParams = True #read in saved checkpoint md/pd 
 
 
-# In[275]:
+# In[53]:
 
 
 #first check for commandLineArgs:
@@ -274,7 +268,7 @@ utils.easy_args(sysArgs, md)
 #mddim = md
 
 
-# In[276]:
+# In[54]:
 
 
 #instead of importing from the params submodule, we'll explicity set the scaling values
@@ -307,7 +301,7 @@ stressScale = ((pd.refDiffusivity*pd.refViscosity)/pd.refLength**2).magnitude
 pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units()/(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
 
 
-# In[277]:
+# In[55]:
 
 
 # changes to base params: (These will keep changing if the notebook is run again without restarting!)
@@ -318,7 +312,7 @@ pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units
 stressScale
 
 
-# In[278]:
+# In[56]:
 
 
 #*************CHECKPOINT-BLOCK**************#
