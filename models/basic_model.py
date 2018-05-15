@@ -10,13 +10,13 @@
 # * Sp vel (35 - 10 Ma) ~ 8 cm/y
 # * Sp vel (10 - 0 Ma) ~ 3 cm/y
 
-# In[164]:
+# In[1]:
 
 
 #22/20.
 
 
-# In[165]:
+# In[2]:
 
 
 #If run through Docker we'll point at the local 'unsupported dir.'
@@ -33,7 +33,7 @@ except:
     pass
 
 
-# In[166]:
+# In[3]:
 
 
 import os
@@ -50,7 +50,7 @@ import pint
 import warnings; warnings.simplefilter('ignore')
 
 
-# In[167]:
+# In[4]:
 
 
 import UWsubduction as usub
@@ -64,7 +64,7 @@ except:
     import unsupported.geodynamics.scaling as sca
 
 
-# In[168]:
+# In[5]:
 
 
 #load in parent stuff
@@ -74,7 +74,7 @@ except:
 #from unsupported_dan.UWsubduction.model import *
 
 
-# In[169]:
+# In[6]:
 
 
 from unsupported_dan.utilities.interpolation import nn_evaluation
@@ -82,7 +82,7 @@ from unsupported_dan.utilities.interpolation import nn_evaluation
 
 # ## Create output dir structure
 
-# In[170]:
+# In[7]:
 
 
 ############
@@ -139,7 +139,7 @@ if uw.rank()==0:
 uw.barrier() #Barrier here so no procs run the check in the next cell too early
 
 
-# In[171]:
+# In[8]:
 
 
 #*************CHECKPOINT-BLOCK**************#
@@ -158,13 +158,13 @@ if cp.restart:
 # * For more information see, `UWsubduction/Background/scaling`
 # 
 
-# In[172]:
+# In[9]:
 
 
 u =  sca.UnitRegistry
 
 
-# In[173]:
+# In[10]:
 
 
 #pd refers to dimensional paramters
@@ -179,7 +179,7 @@ pd.refViscosity = 1e20* u.pascal* u.second
 pd.refLength = 2900*u.km
 pd.gasConstant = 8.314*u.joule/(u.mol*u.kelvin)                   #gas constant
 pd.specificHeat = 1250.4*u.joule/(u.kilogram* u.kelvin)           #Specific heat (Jkg-1K-1)
-pd.potentialTemp = 1573.*u.kelvin                                 #mantle potential temp (K)
+pd.potentialTemp = 1673.*u.kelvin                                 #mantle potential temp (K)
 pd.surfaceTemp = 273.*u.kelvin                                    #surface temp (K)
 #these are the shifted temps, which will range from 0 - 1 in the dimensionless system
 pd.potentialTemp_ = pd.potentialTemp - pd.surfaceTemp
@@ -188,25 +188,34 @@ pd.surfaceTemp_ = pd.surfaceTemp - pd.surfaceTemp
 pd.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
 pd.frictionMantle = u.Quantity(0.1)                                           #mantle friction coefficient in Byerlee law (tan(phi))
 pd.frictionMantleDepth = pd.frictionMantle*pd.refDensity*pd.refGravity
-pd.diffusionPreExp = 5.34e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
-pd.diffusionEnergy = 3e5*u.joule/(u.mol)
-pd.diffusionEnergyDepth = 3e5*u.joule/(u.mol*pd.gasConstant)
-pd.diffusionVolume=5e-6*u.meter**3/(u.mol)
-pd.diffusionVolumeDepth=5e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.joule/(u.mol*pd.gasConstant*u.meter)
+pd.diffusionPreExp = 6.29e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
+pd.diffusionEnergy = 3.18e5*u.joule/(u.mol)
+pd.diffusionEnergyDepth = 3.18e5*u.joule/(u.mol*pd.gasConstant)
+pd.diffusionVolume=5.31e-6*u.meter**3/(u.mol)
+pd.diffusionVolumeDepth=5.31e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.joule/(u.mol*pd.gasConstant*u.meter)
+
+
+
 pd.viscosityFault = 2e19*u.pascal  * u.second
-pd.adiabaticTempGrad = (pd.refExpansivity*pd.refGravity*pd.potentialTemp)/pd.specificHeat
+pd.adiabaticTempGrad = 0.00037
 pd.yieldStressMax=200*u.megapascal
 pd.lowerMantleViscFac = u.Quantity(5.0)
 
 
 
-# In[174]:
+# In[11]:
 
 
 #2*0.45
 
 
-# In[175]:
+# In[12]:
+
+
+#pd.adiabaticTempGrad 
+
+
+# In[274]:
 
 
 md = edict({})
@@ -253,7 +262,7 @@ md.checkpointEvery = 100
 md.restartParams = True #read in saved checkpoint md/pd 
 
 
-# In[176]:
+# In[275]:
 
 
 #first check for commandLineArgs:
@@ -265,7 +274,7 @@ utils.easy_args(sysArgs, md)
 #mddim = md
 
 
-# In[177]:
+# In[276]:
 
 
 #instead of importing from the params submodule, we'll explicity set the scaling values
@@ -298,7 +307,7 @@ stressScale = ((pd.refDiffusivity*pd.refViscosity)/pd.refLength**2).magnitude
 pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units()/(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
 
 
-# In[178]:
+# In[277]:
 
 
 # changes to base params: (These will keep changing if the notebook is run again without restarting!)
@@ -309,7 +318,7 @@ pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units
 stressScale
 
 
-# In[179]:
+# In[278]:
 
 
 #*************CHECKPOINT-BLOCK**************#
@@ -339,7 +348,7 @@ cp.addDict(md, 'md')
 
 # ## Build / refine mesh, Stokes Variables
 
-# In[180]:
+# In[279]:
 
 
 #(npd.rightLim - npd.leftLim)/npd.depth

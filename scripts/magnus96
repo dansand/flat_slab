@@ -1,0 +1,32 @@
+#!/bin/bash --login
+
+#SBATCH --nodes=4
+#SBATCH --time=01:00:00
+#SBATCH --account=m18
+#SBATCH --job-name=001
+
+#module swap PrgEnv-cray PrgEnv-gnu
+#module load cray-hdf5-parallel/1.8.13 python/2.7.10 swig numpy scipy cython mpi4py cmake pkgconfig
+
+
+# python things
+#export PYTHONPATH=$PYTHONPATH:/ivec/cle52/magnus/python/2.7.6/six/1.9.0/lib/python2.7/site-packages/
+
+#module load mpi4py
+
+#export PYTHONPATH=$PYTHONPATH:/group/m18/dsandiford/underworld2_devel
+#export PYTHONPATH=$PYTHONPATH:/scratch/m18/dsandiford/unsupported
+#export PYTHONPATH=$PYTHONPATH:/group/m18/opt/underworld_master
+
+
+
+module swap PrgEnv-cray/6.0.4 PrgEnv-gnu/6.0.4
+module load numpy/1.13.3 cray-hdf5-parallel/1.10.1.1 cython/0.27.3 mpi4py/3.0.0 pkgconfig six/1.11.0 scipy
+export PYTHONPATH=$PYTHONPATH:/group/m18/underworld/underworld2_test
+export PYTHONPATH=$PYTHONPATH:/home/dsandiford/unsupported
+
+cd ..
+cd models
+#higher Sp vels are hardcoded sp (8,2)
+srun -n 96 python basic_model.py D 0 md.res=256 md.depth*=1.25 md.faultThickness*=0.67 pd.viscosityFault*=0.45 md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.75
+

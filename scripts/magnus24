@@ -1,0 +1,92 @@
+#!/bin/bash --login
+
+#SBATCH --nodes=1
+#SBATCH --time=04:30:00
+#SBATCH --account=m18
+#SBATCH --job-name=001
+
+#module swap PrgEnv-cray PrgEnv-gnu
+#module load cray-hdf5-parallel/1.8.13 python/2.7.10 swig numpy scipy cython mpi4py cmake pkgconfig
+
+
+# python things
+#export PYTHONPATH=$PYTHONPATH:/ivec/cle52/magnus/python/2.7.6/six/1.9.0/lib/python2.7/site-packages/
+
+#module load mpi4py
+
+#export PYTHONPATH=$PYTHONPATH:/group/m18/dsandiford/underworld2_devel
+#export PYTHONPATH=$PYTHONPATH:/scratch/m18/dsandiford/unsupported
+#export PYTHONPATH=$PYTHONPATH:/group/m18/opt/underworld_master
+
+
+
+module swap PrgEnv-cray/6.0.4 PrgEnv-gnu/6.0.4
+module load numpy/1.13.3 cray-hdf5-parallel/1.10.1.1 cython/0.27.3 mpi4py/3.0.0 pkgconfig six/1.11.0 scipy
+export PYTHONPATH=$PYTHONPATH:/group/m18/underworld/underworld2_test
+export PYTHONPATH=$PYTHONPATH:/home/dsandiford/unsupported
+
+cd ..
+cd models
+#srun -n 24 python basic_model.py A 0 md.res=128
+#higher Sp vels are hardcoded sp (8,2)
+#srun -n 24 python basic_model.py A 1 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25
+#srun -n 24 python basic_model.py A 2 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.5 md.turnOffVels=True 
+#srun -n 24 python basic_model.py A 3 md.res=160 md.depth*=1.25 md.aspectRatio=4 md.faultThickness*=1. md.buoyancyFac*=1.25
+#srun -n 24 python basic_model.py A 4 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.4 md.turnOffVels=True md.faultViscDepthTaperStart*=1.1
+#srun -n 24 python basic_model.py A 5 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 md.wedgeShallow=35*u.km
+#srun -n 24 python basic_model.py A 6 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0
+
+# A 7 didn't run
+#srun -n 24 python basic_model.py A 7 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 md.wedgeShallow=35
+#srun -n 24 python basic_model.py A 8 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.4 md.turnOffVels=True md.faultViscDepthTaperStart*=1.1
+
+#srun -n 24 python basic_model.py A 9 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.5
+#srun -n 24 python basic_model.py A 10 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25
+#srun -n 24 python basic_model.py A 11 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.5 md.faultViscDepthTaperStart*=1.1
+
+#srun -n 24 python basic_model.py A 12 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.75
+#srun -n 24 python basic_model.py A 13 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5
+
+#srun -n 24 python basic_model.py A 14 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5
+#srun -n 24 python basic_model.py A 15 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5 md.wedgeShallow*=0.89
+
+#srun -n 24 python basic_model.py A 16 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5
+#a test for checkpointing
+#srun -n 24 python basic_model.py A 17 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5
+#1950km trench to mor
+#srun -n 24 python basic_model.py A 18 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5
+
+#A 6 again
+#srun -n 24 python basic_model.py A 19 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0
+
+#note that A20 had no proximity accumulation
+#srun -n 24 python basic_model.py A 20 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=1.0 md.wedgeShallow*=1.0
+
+#hardcoded younger OP 10 ma, wedge shallow = 38 km.
+#srun -n 24 python basic_model.py A 21 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=1.0 md.wedgeShallow*=1.0
+#+ Op vel constant at 2 cm/y
+#srun -n 24 python basic_model.py A 22 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=1.0 md.wedgeShallow*=1.0
+#to campare with B9
+#srun -n 24 python basic_model.py A 23 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5 md.wedgeShallow*=1.0
+#srun -n 24 python basic_model.py A 24 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=1.0 md.wedgeShallow*=1.0
+#A 25 was a fuck up
+#srun -n 24 python basic_model.py A 25 md.res=128 md.faultThickness*=1.0 pd.viscosityFault*=0.65 md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 md.wedgeShallow*=1.0 pd.yieldStressMax*=0.875
+#srun -n 24 python basic_model.py A 26 md.res=128 md.faultThickness*=1.0 pd.viscosityFault*=0.65 md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 md.wedgeShallow*=1.0 pd.yieldStressMax*=0.875
+
+#switch on wedge at 18 
+#srun -n 24 python basic_model.py A 27 md.turnOnWedge*=0.9 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5 md.wedgeShallow*=1.0
+#srun -n 24 python basic_model.py A 28 md.turnOnWedge*=1.1 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5 md.wedgeShallow*=1.0
+
+#this one has 3 cm as the final Vsp
+#srun -n 24 python basic_model.py A 29 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5 md.wedgeShallow*=1.0
+#this has (9,3), (-2,-2)
+#srun -n 24 python basic_model.py A 30 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5 md.wedgeShallow*=1.0
+#same but ysMax = 150
+#srun -n 24 python basic_model.py A 31 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.75 md.wedgeShallow*=1.0
+#deeper, less lowe mantle visc
+#srun -n 24 python basic_model.py A 32 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=2.0 pd.yieldStressMax*=0.75 md.wedgeShallow*=1.0 md.depth*=1.25 md.aspectRatio=4.0
+#this has (9,3), (-2,-2), ridge vel is 2cm/y, ofset is 1800km
+#srun -n 24 python basic_model.py A 33 md.res=128 md.faultThickness*=1. md.buoyancyFac*=1.25 pd.lowerMantleViscFac=10.0 pd.yieldStressMax*=0.5 md.wedgeShallow*=1.0
+
+
+srun -n 24 python basic_model.py A 34 pd.adiabaticTempGrad*=0.9402271 pd.diffusionEnergyDepth*=1.061538 pd.diffusionVolumeDepth*=1.061538 md.res=128 md.faultThickness*=1.0 pd.viscosityFault*=0.45 md.buoyancyFac*=1.1607 pd.yieldStressMax*=0.5 md.wedgeShallow*=1.0
